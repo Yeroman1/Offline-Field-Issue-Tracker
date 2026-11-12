@@ -5,7 +5,8 @@ import { Report, ReportStatus } from '../types';
 import { StatusBadge, PriorityBadge, SyncBadge, CategoryIcon } from '../components/Badge';
 import { getNextAllowedStatuses, validateTransition } from '../lib/statusMachine';
 import { syncEngine } from '../services/syncEngine';
-import { useUserRole } from '../hooks/useUserRole';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   MapPin,
@@ -22,15 +23,23 @@ import {
 } from 'lucide-react';
 
 interface ReportDetailPageProps {
-  reportId: string;
-  onBack: () => void;
+  reportId?: string;
+  onBack?: () => void;
 }
 
 export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
-  reportId,
+  reportId: propReportId,
   onBack,
 }) => {
-  const { user } = useUserRole();
+  const navigate = useNavigate();
+  const { id: paramId } = useParams<{ id: string }>();
+  const reportId = propReportId || paramId || '';
+  const { user, profile } = useAuth();
+
+  const handleBack = () => {
+    if (onBack) onBack();
+    else navigate('/reports');
+  };
 
   // Live queries for this report and its activity logs
   const report = useLiveQuery(() => db.reports.get(reportId), [reportId]);
@@ -57,8 +66,8 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
       <div className="max-w-4xl mx-auto px-4 py-12 text-center">
         <p className="text-on-surface-variant text-sm mb-4">Report record not found.</p>
         <button
-          onClick={onBack}
-          className="px-4 py-2 bg-secondary text-white rounded-xl text-xs font-semibold"
+          onClick={handleBack}
+          className="px-4 py-2 bg-secondary text-white rounded-xl text-xs font-semibold cursor-pointer"
         >
           Return to All Reports
         </button>
@@ -80,9 +89,11 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
     try {
       validateTransition(report.status, targetStatus);
 
-      const updates: Partial<Report> = {
+      const actorName = profile?.fullName || user?.email || 'Field Operator';
+
+      const updates: Partial<Report> & { expectedVersion?: number } = {
         status: targetStatus,
-        version: (report.version || 1) + 1,
+        expectedVersion: report.version || 1,
       };
 
       if (targetStatus === 'assigned') {
@@ -92,18 +103,18 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
 
       if (targetStatus === 'resolved') {
         updates.resolutionNotes = resolutionNotes || 'Issue verified and resolved on site';
-        updates.resolvedBy = user.name;
+        updates.resolvedBy = actorName;
         updates.resolvedAt = new Date().toISOString();
       }
 
       if (targetStatus === 'rejected') {
         updates.resolutionNotes = resolutionNotes || 'Declined during coordinator triage';
-        updates.resolvedBy = user.name;
+        updates.resolvedBy = actorName;
         updates.resolvedAt = new Date().toISOString();
       }
 
       // Enqueue to outbox and local DB
-      await syncEngine.enqueueReportUpdate(report.id, updates, user.name);
+      await syncEngine.enqueueReportUpdate(report.id, updates, actorName);
 
       setFeedbackMsg(`Report status updated to ${targetStatus.toUpperCase()}`);
       setTimeout(() => setFeedbackMsg(null), 3500);
@@ -137,8 +148,8 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
       {/* Top Bar Navigation */}
       <div className="flex items-center justify-between">
         <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface bg-surface-container-low px-3 py-1.5 rounded-lg border border-surface-container transition-colors"
+          onClick={handleBack}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface bg-surface-container-low px-3 py-1.5 rounded-lg border border-surface-container transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Feed</span>
