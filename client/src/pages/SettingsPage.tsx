@@ -1,45 +1,29 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, seedDatabaseIfEmpty } from '../db/db';
-import { useUserRole } from '../hooks/useUserRole';
+import { db } from '../db/db';
+import { useAuth } from '../context/AuthContext';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { syncEngine } from '../services/syncEngine';
 import {
-  UserCheck,
-  Shield,
-  Wifi,
-  WifiOff,
-  RefreshCw,
   Download,
   Trash2,
-  Activity,
+  Radio,
   CheckCircle2,
   HardDrive,
+  LogOut,
+  User,
+  Shield,
+  Mail,
+  Fingerprint,
 } from 'lucide-react';
 
 export const SettingsPage: React.FC = () => {
-  const { role, setRole } = useUserRole();
-  const { isOnline, isSimulatedOffline, latencyMs, toggleSimulatedOffline } =
-    useNetworkStatus();
-
-  const [isSyncing, setIsSyncing] = useState(false);
+  const { profile, user, signOut, isCoordinator } = useAuth();
+  const { isOnline, latencyMs } = useNetworkStatus();
   const [msg, setMsg] = useState<string | null>(null);
 
-  const reportCount = useLiveQuery(() => db.reports.count(), []) || 0;
-  const outboxCount = useLiveQuery(() => db.outbox.count(), []) || 0;
-
-  const handleForceSync = async () => {
-    setIsSyncing(true);
-    setMsg('Initiating force synchronization with server...');
-    const result = await syncEngine.syncNow();
-    setIsSyncing(false);
-    if (result.success) {
-      setMsg(`Sync successful: ${result.syncedOutboxCount} pushed, ${result.pulledReportsCount} pulled.`);
-    } else {
-      setMsg(`Sync notice: ${result.error || 'Server offline, cached locally.'}`);
-    }
-    setTimeout(() => setMsg(null), 4000);
-  };
+  const localReportsCount = useLiveQuery(() => db.reports.count()) || 0;
+  const localOutboxCount = useLiveQuery(() => db.outbox.count()) || 0;
+  const localActivityCount = useLiveQuery(() => db.activityLog.count()) || 0;
 
   const handleExportJSON = async () => {
     const allReports = await db.reports.toArray();
@@ -82,27 +66,32 @@ export const SettingsPage: React.FC = () => {
     dlAnchorElem.click();
   };
 
-  const handleResetDatabase = async () => {
+  const handleClearLocalCache = async () => {
     if (
       window.confirm(
-        'Are you sure you want to reset the local IndexedDB? This re-seeds initial sample reports and wipes the local outbox.'
+        'Are you sure you want to clear local storage? This removes locally cached reports from IndexedDB. Unsynced outbox operations will be cleared.'
       )
     ) {
       await db.reports.clear();
       await db.outbox.clear();
       await db.activityLog.clear();
-      await seedDatabaseIfEmpty();
-      setMsg('Database reset to initial sample seed state.');
+      setMsg('Local IndexedDB tables cleared.');
       setTimeout(() => setMsg(null), 3000);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (window.confirm('Sign out from NilePixel Field Tracker?')) {
+      await signOut();
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-28 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-on-surface">Terminal Settings & Diagnostics</h1>
+        <h1 className="text-xl font-bold text-on-surface">Terminal Settings & Authentication</h1>
         <p className="text-xs text-on-surface-variant mt-0.5">
-          Hardware configuration, role persona emulation, telemetry sync & local cache retention
+          Verified Supabase session, hardware telemetry uplink & local IndexedDB storage management
         </p>
       </div>
 
@@ -113,210 +102,118 @@ export const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Role Switcher */}
-      <div className="bg-surface-container-lowest border border-surface-container-high rounded-2xl p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
-              <UserCheck className="w-4 h-4 text-secondary" />
-              <span>Active Tactical Persona</span>
-            </h3>
-            <p className="text-xs text-on-surface-variant">
-              Switch role context between Field Operator and Regional Coordinator
-            </p>
+      {/* Authenticated Supabase Identity Card */}
+      <div className="bg-surface-container-lowest border border-surface-container-high rounded-2xl p-6 shadow-sm space-y-5">
+        <div className="flex items-center justify-between border-b border-outline-variant/20 pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-xl bg-secondary/15 flex items-center justify-center text-secondary">
+              <User className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-on-surface">
+                {profile?.fullName || 'Verified Field User'}
+              </h3>
+              <p className="text-xs text-on-surface-variant flex items-center gap-1.5 mt-0.5">
+                <Mail className="w-3.5 h-3.5" />
+                <span>{user?.email}</span>
+              </p>
+            </div>
           </div>
-          <span className="font-mono text-xs px-2.5 py-1 rounded-full bg-primary text-tertiary-fixed font-bold">
-            {role.toUpperCase()}
+          <span
+            className={`font-mono text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1.5 ${
+              isCoordinator
+                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+            }`}
+          >
+            {isCoordinator ? <Shield className="w-3.5 h-3.5" /> : <User className="w-3.5 h-3.5" />}
+            <span>{profile?.role || 'FIELD_WORKER'}</span>
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setRole('worker')}
-            className={`p-4 rounded-xl border text-left transition-all ${
-              role === 'worker'
-                ? 'bg-secondary/10 border-secondary ring-2 ring-secondary/20 shadow-xs'
-                : 'bg-surface-container-lowest border-surface-container hover:bg-surface-container-low'
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-on-surface">Sarah J.</span>
-              <UserCheck className="w-4 h-4 text-secondary" />
-            </div>
-            <p className="text-xs text-on-surface-variant mt-1">Field Worker</p>
-            <p className="text-[11px] font-mono text-secondary mt-1">
-              Unit: Hydro Rapid Response Alpha
-            </p>
-          </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+          <div className="p-3 rounded-xl bg-surface-container-low/70 border border-outline-variant/30">
+            <span className="text-on-surface-variant block mb-1 flex items-center gap-1">
+              <Fingerprint className="w-3.5 h-3.5" /> Supabase Auth UUID
+            </span>
+            <span className="text-on-surface font-semibold select-all break-all">{user?.id}</span>
+          </div>
 
+          <div className="p-3 rounded-xl bg-surface-container-low/70 border border-outline-variant/30">
+            <span className="text-on-surface-variant block mb-1 flex items-center gap-1">
+              <Radio className="w-3.5 h-3.5" /> Network Uplink Status
+            </span>
+            <span className="text-on-surface font-semibold">
+              {isOnline ? `Online (${latencyMs ?? 18}ms ping)` : 'Offline (Field Mode)'}
+            </span>
+          </div>
+        </div>
+
+        <div className="pt-2 flex justify-end">
           <button
             type="button"
-            onClick={() => setRole('coordinator')}
-            className={`p-4 rounded-xl border text-left transition-all ${
-              role === 'coordinator'
-                ? 'bg-secondary/10 border-secondary ring-2 ring-secondary/20 shadow-xs'
-                : 'bg-surface-container-lowest border-surface-container hover:bg-surface-container-low'
-            }`}
+            onClick={handleSignOut}
+            className="px-4 py-2 bg-error/10 hover:bg-error/20 text-error rounded-xl font-bold text-xs flex items-center gap-2 border border-error/30 transition-colors cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-sm text-on-surface">Ahmed K.</span>
-              <Shield className="w-4 h-4 text-amber-500" />
-            </div>
-            <p className="text-xs text-on-surface-variant mt-1">Regional Coordinator</p>
-            <p className="text-[11px] font-mono text-secondary mt-1">
-              Unit: Central Field Operations Hub
-            </p>
+            <LogOut className="w-4 h-4" />
+            <span>Sign Out Session</span>
           </button>
         </div>
       </div>
 
-      {/* Offline Mode Simulator & Network Diagnostics */}
-      <div className="bg-surface-container-lowest border border-surface-container-high rounded-2xl p-5 shadow-sm space-y-4">
-        <div>
-          <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
-            <Activity className="w-4 h-4 text-secondary" />
-            <span>Network Uplink & Offline Simulator</span>
-          </h3>
-          <p className="text-xs text-on-surface-variant">
-            Emulate deep desert or subterranean signal loss without cutting host Wi-Fi
-          </p>
-        </div>
-
-        <div className="flex items-center justify-between p-4 bg-surface-container-low/60 rounded-xl border border-surface-container">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isSimulatedOffline ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'
-              }`}
-            >
-              {isSimulatedOffline ? <WifiOff className="w-5 h-5" /> : <Wifi className="w-5 h-5" />}
-            </div>
-            <div>
-              <span className="text-sm font-bold text-on-surface block">
-                Simulate Zero-Connectivity Offline Mode
-              </span>
-              <span className="text-xs text-on-surface-variant">
-                {isSimulatedOffline
-                  ? 'All HTTP sync network traffic is suspended locally.'
-                  : 'Normal connectivity mode active.'}
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={toggleSimulatedOffline}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
-              isSimulatedOffline
-                ? 'bg-rose-700 text-white hover:bg-rose-800'
-                : 'bg-primary text-white hover:bg-primary-container'
-            }`}
-          >
-            {isSimulatedOffline ? 'Disable Simulation' : 'Simulate Offline'}
-          </button>
-        </div>
-
-        {/* Diagnostic Telemetry Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="bg-surface-container-low p-3 rounded-xl border border-surface-container">
-            <span className="text-on-surface-variant block mb-1">Effective Status</span>
-            <span
-              className={`font-mono font-bold ${
-                isOnline ? 'text-emerald-700' : 'text-amber-700'
-              }`}
-            >
-              {isOnline ? 'ONLINE' : 'OFFLINE'}
-            </span>
-          </div>
-
-          <div className="bg-surface-container-low p-3 rounded-xl border border-surface-container">
-            <span className="text-on-surface-variant block mb-1">Ping Latency</span>
-            <span className="font-mono font-bold text-on-surface">
-              {latencyMs ? `${latencyMs} ms` : '—'}
-            </span>
-          </div>
-
-          <div className="bg-surface-container-low p-3 rounded-xl border border-surface-container">
-            <span className="text-on-surface-variant block mb-1">Outbox Items</span>
-            <span className="font-mono font-bold text-amber-700">{outboxCount} queued</span>
-          </div>
-
-          <div className="bg-surface-container-low p-3 rounded-xl border border-surface-container">
-            <span className="text-on-surface-variant block mb-1">Total Reports</span>
-            <span className="font-mono font-bold text-on-surface">{reportCount} records</span>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={handleForceSync}
-            disabled={isSyncing}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary text-white text-xs font-bold hover:bg-secondary-container transition-colors shadow-xs"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-            <span>Force Sync Telemetry</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Local Storage & Cache Management */}
+      {/* Local IndexedDB Diagnostics */}
       <div className="bg-surface-container-lowest border border-surface-container-high rounded-2xl p-5 shadow-sm space-y-4">
         <div>
           <h3 className="text-sm font-bold text-on-surface flex items-center gap-2">
             <HardDrive className="w-4 h-4 text-secondary" />
-            <span>Data Extraction & Local Storage Engine</span>
+            <span>Local IndexedDB Persistence (Dexie.js)</span>
           </h3>
           <p className="text-xs text-on-surface-variant">
-            Export offline database snapshots or restore clean calibration state
+            Zero-latency browser storage partition for offline continuity
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="p-3 bg-surface-container-low rounded-xl border border-surface-container">
+            <span className="text-lg font-black font-mono text-on-surface">{localReportsCount}</span>
+            <span className="block text-[11px] text-on-surface-variant mt-0.5">Cached Reports</span>
+          </div>
+          <div className="p-3 bg-surface-container-low rounded-xl border border-surface-container">
+            <span className="text-lg font-black font-mono text-amber-600 dark:text-amber-400">
+              {localOutboxCount}
+            </span>
+            <span className="block text-[11px] text-on-surface-variant mt-0.5">Queued Outbox</span>
+          </div>
+          <div className="p-3 bg-surface-container-low rounded-xl border border-surface-container">
+            <span className="text-lg font-black font-mono text-on-surface">{localActivityCount}</span>
+            <span className="block text-[11px] text-on-surface-variant mt-0.5">Audit Events</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-2">
           <button
             type="button"
             onClick={handleExportJSON}
-            className="flex items-center justify-between p-3.5 rounded-xl border border-surface-container bg-surface-container-low/40 hover:bg-surface-container-low transition-colors text-xs font-semibold text-on-surface"
+            className="px-3.5 py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-2.5">
-              <Download className="w-4 h-4 text-secondary" />
-              <span>Export Full Cache (JSON)</span>
-            </div>
-            <span className="text-[10px] font-mono text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">
-              .json
-            </span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Export Reports JSON</span>
           </button>
-
           <button
             type="button"
             onClick={handleExportGeoJSON}
-            className="flex items-center justify-between p-3.5 rounded-xl border border-surface-container bg-surface-container-low/40 hover:bg-surface-container-low transition-colors text-xs font-semibold text-on-surface"
+            className="px-3.5 py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-2.5">
-              <Download className="w-4 h-4 text-secondary" />
-              <span>Export GIS Coordinates (GeoJSON)</span>
-            </div>
-            <span className="text-[10px] font-mono text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">
-              .geojson
-            </span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Export GIS GeoJSON</span>
           </button>
-        </div>
-
-        <div className="border-t border-surface-container pt-4 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-bold text-rose-700 block">Reset Local Database</span>
-            <span className="text-[11px] text-on-surface-variant">
-              Clears Dexie cache and reloads default seed records
-            </span>
-          </div>
           <button
             type="button"
-            onClick={handleResetDatabase}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 text-xs font-semibold transition-colors"
+            onClick={handleClearLocalCache}
+            className="px-3.5 py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer ml-auto"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Reset Database</span>
+            <span>Clear Local Storage</span>
           </button>
         </div>
       </div>
