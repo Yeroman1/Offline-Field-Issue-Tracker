@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { useUserRole } from '../hooks/useUserRole';
+import { useAuth } from '../context/AuthContext';
 import { db } from '../db/db';
 import { syncEngine } from '../services/syncEngine';
+import { useNavigate } from 'react-router-dom';
 import {
   Wifi,
   WifiOff,
@@ -18,11 +19,20 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
-  const { isOnline, isSimulatedOffline, latencyMs } = useNetworkStatus();
-  const { user, isCoordinator } = useUserRole();
+  const navigate = useNavigate();
+  const { isOnline, latencyMs } = useNetworkStatus();
+  const { profile, isCoordinator } = useAuth();
   const [pendingCount, setPendingCount] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncSuccessToast, setSyncSuccessToast] = useState<boolean>(false);
+
+  const userName = profile?.fullName || profile?.email || 'Field Worker';
+  const userRole = profile?.role || 'FIELD_WORKER';
+
+  const handleSettingsClick = () => {
+    if (onNavigateSettings) onNavigateSettings();
+    else navigate('/settings');
+  };
 
   useEffect(() => {
     const unsub = syncEngine.subscribe((status) => {
@@ -58,13 +68,17 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
       {/* Top Tactical Banner */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between">
         {/* Brand & Mission Tag */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary to-secondary-container text-white shadow-inner">
+        <div
+          onClick={() => navigate('/')}
+          className="flex items-center gap-3 cursor-pointer group"
+          title="Return to Dashboard"
+        >
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-secondary to-secondary-container text-white shadow-inner group-hover:scale-105 transition-transform">
             <Radio className="w-5 h-5 animate-pulse text-tertiary-fixed" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-lg font-black tracking-wider uppercase text-white font-mono">
+              <span className="text-lg font-black tracking-wider uppercase text-white font-mono group-hover:text-tertiary-fixed transition-colors">
                 Nile<span className="text-tertiary-fixed">Pixel</span>
               </span>
               <span className="hidden sm:inline-block text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-primary-container text-surface-container-high border border-slate-700">
@@ -86,13 +100,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
                 ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
                 : 'bg-rose-950/80 text-rose-300 border-rose-700/60'
             }`}
-            title={
-              isSimulatedOffline
-                ? 'Offline Mode (Manual Simulation)'
-                : isOnline
-                ? `Online - Latency ${latencyMs ?? 18}ms`
-                : 'Offline - Field Cache Engaged'
-            }
+            title={isOnline ? `Online - Latency ${latencyMs ?? 18}ms` : 'Offline - Field Cache Engaged'}
           >
             {isOnline ? (
               <>
@@ -107,9 +115,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
             ) : (
               <>
                 <WifiOff className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-                <span className="font-mono text-[11px]">
-                  {isSimulatedOffline ? 'SIM OFFLINE' : 'OFFLINE'}
-                </span>
+                <span className="font-mono text-[11px]">OFFLINE</span>
               </>
             )}
           </div>
@@ -138,24 +144,24 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
 
           {/* User Profile / Role Pill */}
           <button
-            onClick={onNavigateSettings}
-            className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-primary-container border border-slate-700 hover:border-secondary transition-colors"
-            title={`Active: ${user.name} (${user.role}) - Click for Settings`}
+            onClick={handleSettingsClick}
+            className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-primary-container border border-slate-700 hover:border-secondary transition-colors cursor-pointer"
+            title={`Active: ${userName} (${userRole}) - Click for Settings`}
           >
             <div className="w-6 h-6 rounded-full bg-secondary-container text-white flex items-center justify-center text-xs font-bold font-mono">
-              {user.name.charAt(0)}
+              {userName.charAt(0)}
             </div>
             <div className="text-left hidden md:block">
               <div className="text-xs font-semibold leading-tight text-white flex items-center gap-1">
-                {user.name}
+                {userName}
                 {isCoordinator ? (
                   <Shield className="w-3 h-3 text-amber-400" />
                 ) : (
                   <UserCheck className="w-3 h-3 text-tertiary-fixed" />
                 )}
               </div>
-              <div className="text-[10px] text-surface-container-high/60 capitalize leading-none">
-                {user.role}
+              <div className="text-[10px] text-surface-container-high/60 capitalize leading-none font-mono">
+                {userRole.toLowerCase().replace('_', ' ')}
               </div>
             </div>
           </button>
