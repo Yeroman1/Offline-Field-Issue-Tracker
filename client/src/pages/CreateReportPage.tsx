@@ -3,8 +3,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { Report, ReportCategory, ReportPriority } from '../types';
 import { VALID_CATEGORIES, VALID_PRIORITIES, validateReportInput } from '../lib/validation';
 import { syncEngine } from '../services/syncEngine';
-import { useUserRole } from '../hooks/useUserRole';
+import { useAuth } from '../context/AuthContext';
 import { CategoryIcon } from '../components/Badge';
+import { useNavigate } from 'react-router-dom';
 import {
   Camera,
   Trash2,
@@ -19,15 +20,26 @@ import {
 } from 'lucide-react';
 
 interface CreateReportPageProps {
-  onBack: () => void;
-  onSuccess: (reportId: string) => void;
+  onBack?: () => void;
+  onSuccess?: (reportId: string) => void;
 }
 
 export const CreateReportPage: React.FC<CreateReportPageProps> = ({
   onBack,
   onSuccess,
 }) => {
-  const { user } = useUserRole();
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+
+  const handleBack = () => {
+    if (onBack) onBack();
+    else navigate(-1);
+  };
+
+  const handleSuccessNav = (id: string) => {
+    if (onSuccess) onSuccess(id);
+    else navigate(`/reports/${id}`);
+  };
 
   // Form State
   const [title, setTitle] = useState('');
@@ -151,8 +163,8 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
         longitude,
         locationName: locationName.trim() || 'Field Station Coordinate',
         locationAccuracy,
-        reporterName: user.name,
-        reporterId: user.id,
+        reporterName: profile?.fullName || user?.email || 'Field Reporter',
+        reporterId: user?.id || 'unauthenticated',
         photoUrl: photoDataUrl || undefined,
         photoCount: photoDataUrl ? 1 : 0,
         version: 1,
@@ -170,7 +182,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
       );
 
       setTimeout(() => {
-        onSuccess(reportId);
+        handleSuccessNav(reportId);
       }, 1000);
     } catch (err: any) {
       setErrors({ general: err.message || 'Failed to save field report' });
@@ -183,7 +195,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
       {/* Navigation Header */}
       <div className="flex items-center justify-between">
         <button
-          onClick={onBack}
+          onClick={handleBack}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-on-surface-variant hover:text-on-surface bg-surface-container-low px-3 py-1.5 rounded-lg border border-surface-container transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -191,7 +203,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
         </button>
 
         <span className="text-xs font-mono text-on-surface-variant">
-          Reporter: <strong>{user.name}</strong> ({user.team})
+          Reporter: <strong>{profile?.fullName || user?.email || 'Field Worker'}</strong> ({profile?.team || 'Field Unit'})
         </span>
       </div>
 
