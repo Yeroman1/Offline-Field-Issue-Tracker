@@ -5,6 +5,7 @@ import { ReportStatus, ReportPriority } from '../types';
 import { StatusBadge, PriorityBadge, SyncBadge, CategoryIcon } from '../components/Badge';
 import { syncEngine } from '../services/syncEngine';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useNavigate } from 'react-router-dom';
 import {
   RefreshCw,
   PlusCircle,
@@ -21,9 +22,9 @@ import {
 } from 'lucide-react';
 
 interface DashboardPageProps {
-  onNavigateCreate: () => void;
-  onNavigateAll: () => void;
-  onSelectReport: (reportId: string) => void;
+  onNavigateCreate?: () => void;
+  onNavigateAll?: () => void;
+  onSelectReport?: (reportId: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -31,6 +32,22 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigateAll,
   onSelectReport,
 }) => {
+  const navigate = useNavigate();
+
+  const handleCreate = () => {
+    if (onNavigateCreate) onNavigateCreate();
+    else navigate('/create');
+  };
+
+  const handleAll = () => {
+    if (onNavigateAll) onNavigateAll();
+    else navigate('/reports');
+  };
+
+  const handleSelect = (id: string) => {
+    if (onSelectReport) onSelectReport(id);
+    else navigate(`/reports/${id}`);
+  };
   const { isOnline, isSimulatedOffline } = useNetworkStatus();
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
@@ -178,7 +195,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
         <button
-          onClick={onNavigateCreate}
+          onClick={handleCreate}
           className="inline-flex items-center justify-center gap-2 bg-secondary text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-secondary-container transition-colors shadow-sm shrink-0"
         >
           <PlusCircle className="w-4 h-4 text-tertiary-fixed" />
@@ -371,7 +388,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             </p>
           </div>
           <button
-            onClick={onNavigateAll}
+            onClick={handleAll}
             className="text-xs font-medium text-secondary hover:text-secondary-container flex items-center gap-1 cursor-pointer"
           >
             <span>View All ({totalCount})</span>
@@ -388,7 +405,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             recentReports.map((report) => (
               <div
                 key={report.id}
-                onClick={() => onSelectReport(report.id)}
+                onClick={() => handleSelect(report.id)}
                 className="py-3.5 first:pt-0 last:pb-0 hover:bg-surface-container-low/40 rounded-xl px-2 transition-colors cursor-pointer group flex flex-col sm:flex-row sm:items-center justify-between gap-3"
               >
                 <div className="space-y-1.5 flex-1 min-w-0">
