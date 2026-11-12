@@ -44,17 +44,27 @@ const updateStatusSchema = z.object({
 async function generateReportNumber(): Promise<string> {
   const reports = await prisma.report.findMany({
     select: { reportNumber: true },
-    where: { reportNumber: { startsWith: 'NP-' } },
   });
+  const existingSet = new Set(reports.map((r) => r.reportNumber));
 
   let maxNum = 8800;
   for (const r of reports) {
-    const numPart = parseInt(r.reportNumber.replace('NP-', ''), 10);
-    if (!isNaN(numPart) && numPart > maxNum) {
-      maxNum = numPart;
+    if (r.reportNumber && r.reportNumber.startsWith('NP-')) {
+      const match = r.reportNumber.match(/^NP-(\d+)$/);
+      if (match) {
+        const numPart = parseInt(match[1], 10);
+        if (numPart > maxNum) {
+          maxNum = numPart;
+        }
+      }
     }
   }
-  return `NP-${maxNum + 1}`;
+
+  let nextNum = maxNum + 1;
+  while (existingSet.has(`NP-${nextNum}`)) {
+    nextNum++;
+  }
+  return `NP-${nextNum}`;
 }
 
 // GET /api/reports (with filters: status, priority, category, search, since, limit, offset, sort, order)
@@ -182,7 +192,15 @@ reportsRouter.post('/', async (req: Request, res: Response) => {
     const parsed = createReportSchema.parse(req.body);
 
     const reportId = parsed.id || uuidv4();
-    const reportNumber = parsed.reportNumber || (await generateReportNumber());
+    let reportNumber = parsed.reportNumber;
+    if (!reportNumber) {
+      reportNumber = await generateReportNumber();
+    } else {
+      const existingWithNum = await prisma.report.findUnique({ where: { reportNumber } });
+      if (existingWithNum && existingWithNum.id !== reportId) {
+        reportNumber = await generateReportNumber();
+      }
+    }
 
     const report = await prisma.$transaction(async (tx) => {
       const created = await tx.report.create({
