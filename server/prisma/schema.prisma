@@ -1,53 +1,139 @@
+// NilePixel Offline Field Issue Tracker — Prisma Schema
+// Production PostgreSQL on Supabase
+
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
+// -----------------------------------------------------------------------------
+// USER PROFILE MODEL (Linked to Supabase auth.users)
+// -----------------------------------------------------------------------------
+model UserProfile {
+  id        String   @id // Supabase auth.users UUID
+  email     String   @unique
+  fullName  String
+  role      String   @default("FIELD_WORKER") // FIELD_WORKER | COORDINATOR
+  team      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reportsCreated  Report[]      @relation("ReportAuthor")
+
+  @@index([role])
+}
+
+// -----------------------------------------------------------------------------
+// CORE REPORT MODEL
+// -----------------------------------------------------------------------------
 model Report {
-  id               String       @id
-  reportNumber     String       @unique
+  id               String    @id @default(uuid())
+  clientReportId   String    @unique
+  reportNumber     String    @unique
   title            String
-  description      String?
-  category         String
-  priority         String
-  status           String
-  syncStatus       String       @default("synced")
+  category         String    // BROKEN_WATER | DAMAGED_EQUIPMENT | SERVICE_INTERRUPTION | SAFETY_CONCERN | MAINTENANCE_REQUIRED
+  description      String
+  location         String?   // Serialized location data or address
   latitude         Float?
   longitude        Float?
   locationName     String?
   locationAccuracy Float?
+  priority         String    // LOW | MEDIUM | HIGH | CRITICAL
+  status           String    @default("SUBMITTED") // DRAFT | SUBMITTED | ASSIGNED | IN_PROGRESS | RESOLVED | REJECTED
+  reportedAt       DateTime  @default(now())
+  reporterId       String    // UUID of field worker
   reporterName     String?
-  reporterId       String?
-  assignedTo       String?
-  assignedTeam     String?
-  resolutionNotes  String?
-  resolvedBy       String?
-  resolvedAt       DateTime?
-  version          Int          @default(1)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  activityLogs     ActivityLog[]
+  sourceDeviceId   String    // Identifier of originating field hardware/browser
+  assignedTo       String?   // Coordinator or technician ID
+  assignedTeam     String?   // Field crew designation (e.g., Crew Alpha)
+  resolutionNotes  String?   // Closure summary or rejection justification
+  resolvedBy       String?   // Actor who verified resolution
+  resolvedAt       DateTime? // Timestamp when issue was resolved
+  version          Int       @default(1) // Optimistic concurrency control counter
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relational history & metadata
+  reporter          UserProfile?        @relation("ReportAuthor", fields: [reporterId], references: [id], onDelete: Cascade)
+  syncMetadata      SyncMetadata?
+  activityLogs      ActivityLog[]
+  statusTransitions StatusTransition[]
+
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([reporterId])
+  @@index([assignedTo])
+  @@index([createdAt])
 }
 
+// -----------------------------------------------------------------------------
+// SYNC METADATA MODEL
+// -----------------------------------------------------------------------------
+model SyncMetadata {
+  id             String    @id @default(uuid())
+  reportId       String    @unique
+  report         Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  syncStatus     String    @default("SYNCED") // PENDING | SYNCED | FAILED
+  attemptCount   Int       @default(1)
+  lastAttemptAt  DateTime?
+  acknowledgedAt DateTime?
+  errorMessage   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([syncStatus])
+}
+
+// -----------------------------------------------------------------------------
+// STATUS TRANSITION AUDIT HISTORY
+// -----------------------------------------------------------------------------
+model StatusTransition {
+  id         String   @id @default(uuid())
+  reportId   String
+  report     Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  fromStatus String
+  toStatus   String
+  actorId    String?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([reportId])
+}
+
+// -----------------------------------------------------------------------------
+// GENERAL ACTIVITY AUDIT TRAIL
+// -----------------------------------------------------------------------------
 model ActivityLog {
-  id            String   @id
+  id            String       @id @default(uuid())
   reportId      String?
-  report        Report?  @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  action        String
+  report        Report?      @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  action        String       // REPORT_CREATED | STATUS_UPDATED | REPORT_UPDATED | SYNC_ACKNOWLEDGED | SYNC_FAILED
+  actorId       String?
   actorName     String?
   description   String?
-  previousValue String?
-  newValue      String?
-  createdAt     DateTime @default(now())
+  previousValue String?      // Serialized JSON of prior state
+  newValue      String?      // Serialized JSON of updated state
+  createdAt     DateTime     @default(now())
+
+  @@index([reportId])
+  @@index([action])
 }
 
+// -----------------------------------------------------------------------------
+// IDEMPOTENCY RECORD FOR RETRY INTEGRITY & DEDUPLICATION
+// -----------------------------------------------------------------------------
 model IdempotencyRecord {
-  key       String   @id
-  response  String
-  createdAt DateTime @default(now())
-}
+  key         String   @id // Client-provided idempotencyKey
+  payloadHash String   // SHA-256 fingerprint of normalized request body
+  statusCode  Int      // HTTP response code cached
+  response    String   // Serialized JSON response
+  createdAt   DateTime @default(now())
 
+  @@index([createdAt])
+}
