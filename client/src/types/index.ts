@@ -44,6 +44,9 @@ export interface OutboxItem {
   status: OutboxStatus;
   attempts: number;
   lastAttemptAt?: string | null;
+  nextAttemptAt?: string | null;
+  error?: string | null;
+  errorType?: 'transient' | 'validation' | 'conflict' | null;
   createdAt: string;
   idempotencyKey: string;
 }
