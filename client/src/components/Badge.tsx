@@ -62,7 +62,8 @@ export const StatusBadge: React.FC<{ status: ReportStatus; size?: 'sm' | 'md' }>
     },
   };
 
-  const config = configs[status] || configs.draft;
+  const normalizedStatus = (status || 'draft').toLowerCase() as ReportStatus;
+  const config = configs[normalizedStatus] || configs.draft;
   const Icon = config.icon;
   const sizeClasses = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-xs font-semibold px-2.5 py-1';
 
@@ -87,7 +88,10 @@ export const PriorityBadge: React.FC<{ priority: ReportPriority; size?: 'sm' | '
     Critical: { label: 'Critical', bg: 'bg-rose-100', text: 'text-rose-800', dot: 'bg-rose-600' },
   };
 
-  const config = configs[priority] || configs.Low;
+  const normalizedPriority = (
+    priority ? priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase() : 'Low'
+  ) as ReportPriority;
+  const config = configs[normalizedPriority] || configs.Low;
   const sizeClasses = size === 'sm' ? 'text-xs px-2 py-0.5' : 'text-xs font-medium px-2 py-0.5';
 
   return (
@@ -125,22 +129,25 @@ export const SyncBadge: React.FC<{ syncStatus: SyncStatus }> = ({ syncStatus }) 
   );
 };
 
-export const CategoryIcon: React.FC<{ category: ReportCategory; className?: string }> = ({
+export const CategoryIcon: React.FC<{ category: ReportCategory | string; className?: string }> = ({
   category,
   className = 'w-4 h-4',
 }) => {
-  switch (category) {
-    case 'Water':
-      return <Droplet className={`${className} text-cyan-600`} />;
-    case 'Equipment':
-      return <Wrench className={`${className} text-indigo-600`} />;
-    case 'Infrastructure':
-      return <HardHat className={`${className} text-amber-600`} />;
-    case 'Safety':
-      return <ShieldAlert className={`${className} text-rose-600`} />;
-    case 'Maintenance':
-      return <Wrench className={`${className} text-emerald-600`} />;
-    default:
-      return <AlertTriangle className={`${className} text-slate-500`} />;
+  const norm = (category || '').toLowerCase();
+  if (norm.includes('water')) {
+    return <Droplet className={`${className} text-cyan-600`} />;
   }
+  if (norm.includes('equip')) {
+    return <Wrench className={`${className} text-indigo-600`} />;
+  }
+  if (norm.includes('infra')) {
+    return <HardHat className={`${className} text-amber-600`} />;
+  }
+  if (norm.includes('safe')) {
+    return <ShieldAlert className={`${className} text-rose-600`} />;
+  }
+  if (norm.includes('maint') || norm.includes('service')) {
+    return <Wrench className={`${className} text-emerald-600`} />;
+  }
+  return <AlertTriangle className={`${className} text-slate-500`} />;
 };
