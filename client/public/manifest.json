@@ -1,0 +1,17 @@
+{
+  "name": "NilePixel Offline Field Tracker",
+  "short_name": "NileField",
+  "description": "Tactical offline field issue tracking & infrastructure monitoring system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8f9ff",
+  "theme_color": "#14213d",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
+
