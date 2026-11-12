@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import { StatusBadge, PriorityBadge, SyncBadge, CategoryIcon } from '../components/Badge';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   MapPin,
@@ -17,8 +18,8 @@ import {
 } from 'lucide-react';
 
 interface AllReportsPageProps {
-  onSelectReport: (reportId: string) => void;
-  onNavigateCreate: () => void;
+  onSelectReport?: (reportId: string) => void;
+  onNavigateCreate?: () => void;
   initialFilter?: { status?: string; reporterId?: string };
 }
 
@@ -27,6 +28,17 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
   onNavigateCreate,
   initialFilter,
 }) => {
+  const navigate = useNavigate();
+
+  const handleSelect = (id: string) => {
+    if (onSelectReport) onSelectReport(id);
+    else navigate(`/reports/${id}`);
+  };
+
+  const handleCreate = () => {
+    if (onNavigateCreate) onNavigateCreate();
+    else navigate('/create');
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>(
     initialFilter?.status || 'all'
@@ -193,6 +205,16 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
               <MapIcon className="w-4 h-4" />
             </button>
           </div>
+
+          {/* Create Button */}
+          <button
+            onClick={handleCreate}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-white text-xs font-semibold rounded-xl hover:bg-secondary-container transition-colors shadow-sm cursor-pointer"
+            title="Create New Report"
+          >
+            <Plus className="w-3.5 h-3.5 text-tertiary-fixed" />
+            <span>New Report</span>
+          </button>
         </div>
       </div>
 
@@ -326,7 +348,7 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
                 return (
                   <div
                     key={report.id}
-                    onClick={() => onSelectReport(report.id)}
+                    onClick={() => handleSelect(report.id)}
                     style={{ left: `${posX}%`, top: `${posY}%` }}
                     className="absolute cursor-pointer group transform -translate-x-1/2 -translate-y-1/2 z-20"
                   >
@@ -387,7 +409,7 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
             filteredReports.map((report) => (
               <div
                 key={report.id}
-                onClick={() => onSelectReport(report.id)}
+                onClick={() => handleSelect(report.id)}
                 className="bg-surface-container-lowest border border-surface-container-high rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-secondary/50 transition-all cursor-pointer group"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
