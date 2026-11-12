@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -11,23 +12,45 @@ import {
 export type NavTab = 'dashboard' | 'all' | 'create' | 'mine' | 'activity' | 'settings';
 
 interface BottomNavProps {
-  activeTab: NavTab;
-  onSelectTab: (tab: NavTab) => void;
+  activeTab?: NavTab;
+  onSelectTab?: (tab: NavTab) => void;
   pendingCount?: number;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
-  activeTab,
+  activeTab: propActiveTab,
   onSelectTab,
   pendingCount = 0,
 }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const getComputedTab = (): NavTab => {
+    if (propActiveTab) return propActiveTab;
+    const p = location.pathname;
+    if (p === '/create') return 'create';
+    if (p.startsWith('/reports') && p !== '/reports') return 'all';
+    if (p === '/reports') return 'all';
+    if (p === '/my-reports') return 'mine';
+    if (p === '/activity') return 'activity';
+    if (p === '/settings') return 'settings';
+    return 'dashboard';
+  };
+
+  const activeTab = getComputedTab();
+
+  const handleTabClick = (tab: NavTab, route: string) => {
+    if (onSelectTab) onSelectTab(tab);
+    navigate(route);
+  };
+
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 bg-primary/95 backdrop-blur-md border-t border-primary-container text-white py-1.5 px-2 safe-area-bottom shadow-2xl">
       <div className="max-w-md mx-auto grid grid-cols-6 items-center text-center">
         {/* Dashboard */}
         <button
-          onClick={() => onSelectTab('dashboard')}
-          className={`flex flex-col items-center justify-center py-1 transition-all ${
+          onClick={() => handleTabClick('dashboard', '/')}
+          className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'dashboard'
               ? 'text-tertiary-fixed scale-105 font-semibold'
               : 'text-surface-container-high/60 hover:text-white'
@@ -39,8 +62,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
         {/* All Reports */}
         <button
-          onClick={() => onSelectTab('all')}
-          className={`flex flex-col items-center justify-center py-1 transition-all ${
+          onClick={() => handleTabClick('all', '/reports')}
+          className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'all'
               ? 'text-tertiary-fixed scale-105 font-semibold'
               : 'text-surface-container-high/60 hover:text-white'
@@ -52,8 +75,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
         {/* Create + (Centerpiece) */}
         <button
-          onClick={() => onSelectTab('create')}
-          className="flex flex-col items-center justify-center -mt-4 group"
+          onClick={() => handleTabClick('create', '/create')}
+          className="flex flex-col items-center justify-center -mt-4 group cursor-pointer"
           title="File New Field Report"
         >
           <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-secondary to-secondary-container text-white flex items-center justify-center shadow-lg border-2 border-primary group-hover:scale-110 group-active:scale-95 transition-transform">
@@ -66,8 +89,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
         {/* Mine */}
         <button
-          onClick={() => onSelectTab('mine')}
-          className={`flex flex-col items-center justify-center py-1 transition-all ${
+          onClick={() => handleTabClick('mine', '/my-reports')}
+          className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'mine'
               ? 'text-tertiary-fixed scale-105 font-semibold'
               : 'text-surface-container-high/60 hover:text-white'
@@ -79,8 +102,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
         {/* Activity */}
         <button
-          onClick={() => onSelectTab('activity')}
-          className={`flex flex-col items-center justify-center py-1 relative transition-all ${
+          onClick={() => handleTabClick('activity', '/activity')}
+          className={`flex flex-col items-center justify-center py-1 relative transition-all cursor-pointer ${
             activeTab === 'activity'
               ? 'text-tertiary-fixed scale-105 font-semibold'
               : 'text-surface-container-high/60 hover:text-white'
@@ -95,15 +118,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
         {/* Settings */}
         <button
-          onClick={() => onSelectTab('settings')}
-          className={`flex flex-col items-center justify-center py-1 transition-all ${
+          onClick={() => handleTabClick('settings', '/settings')}
+          className={`flex flex-col items-center justify-center py-1 transition-all cursor-pointer ${
             activeTab === 'settings'
               ? 'text-tertiary-fixed scale-105 font-semibold'
               : 'text-surface-container-high/60 hover:text-white'
           }`}
         >
           <Settings className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Config</span>
+          <span className="text-[10px] tracking-tight">Settings</span>
         </button>
       </div>
     </nav>
