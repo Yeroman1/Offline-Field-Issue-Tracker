@@ -2,12 +2,62 @@ import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db/db';
 import { Report, OutboxItem, SyncApiResponse, SyncBatchItem } from '../types';
 import { getSimulatedOffline } from '../hooks/useNetworkStatus';
+import { supabase } from '../utils/supabase';
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
+    }
+  } catch {}
+  return headers;
+}
 
 const BASE_URL = typeof window !== 'undefined' && window.location.origin
   ? '' // use relative URL with Vite proxy
   : 'http://localhost:3001';
 
 const LAST_SYNC_KEY = 'nilepixel_last_sync_timestamp';
+export const MAX_RETRY_ATTEMPTS = 5;
+
+/**
+ * Calculates exponential backoff delay with jitter.
+ * delay = min(maxMs, baseMs * 2^attempts) + random(0, jitterMs)
+ */
+export function calculateBackoffDelay(
+  attempts: number,
+  baseMs = 1000,
+  maxMs = 30000,
+  jitterMs = 1000
+): number {
+  const exponential = Math.min(maxMs, baseMs * Math.pow(2, attempts));
+  const jitter = Math.random() * jitterMs;
+  return Math.floor(exponential + jitter);
+}
+
+/**
+ * Determines whether an error is transient (network / 5xx) or permanent (validation / schema / 4xx).
+ */
+export function isPermanentError(errorMsg?: string): boolean {
+  if (!errorMsg) return false;
+  const msg = errorMsg.toLowerCase();
+  return (
+    msg.includes('validation') ||
+    msg.includes('transition') ||
+    msg.includes('forbidden') ||
+    msg.includes('unauthorized') ||
+    msg.includes('not found') ||
+    msg.includes('conflict') ||
+    msg.includes('syntax') ||
+    msg.includes('missing required') ||
+    msg.includes('bad request') ||
+    msg.includes('unprocessable')
+  );
+}
 
 export interface SyncResult {
   success: boolean;
@@ -26,13 +76,17 @@ export interface SyncEngineStatus {
 
 type SyncListener = (status: SyncEngineStatus) => void;
 
-class SyncEngine {
+export class SyncEngine {
   private isSyncing = false;
+  private inFlightPromise: Promise<SyncResult> | null = null;
   private listeners: Set<SyncListener> = new Set();
   private autoSyncInterval: any = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
+      // Recovery sweep: reset any stranded 'syncing' items from interrupted runs/refreshes
+      this.recoverStrandedItems().catch(() => {});
+
       // Auto sync when coming back online
       window.addEventListener('online', () => {
         this.syncNow().catch(() => {});
@@ -42,13 +96,27 @@ class SyncEngine {
           this.syncNow().catch(() => {});
         }
       });
-      // Start background poll every 30 seconds
+      // Background poll every 30 seconds
       this.autoSyncInterval = setInterval(() => {
         if (navigator.onLine && !getSimulatedOffline()) {
           this.syncNow().catch(() => {});
         }
       }, 30000);
     }
+  }
+
+  /**
+   * Resets any stranded outbox items left in 'syncing' state (e.g. if the tab was closed or refreshed).
+   * Ensures no report operation is silently dropped.
+   */
+  public async recoverStrandedItems(): Promise<number> {
+    const stranded = await db.outbox.where('status').equals('syncing').toArray();
+    if (stranded.length > 0) {
+      await db.outbox.where('status').equals('syncing').modify({
+        status: 'pending',
+      });
+    }
+    return stranded.length;
   }
 
   public subscribe(listener: SyncListener): () => void {
@@ -59,11 +127,11 @@ class SyncEngine {
     };
   }
 
-  private notify(lastError: string | null = null): void {
+  public notify(lastError: string | null = null): void {
     const status: SyncEngineStatus = {
       isSyncing: this.isSyncing,
       lastSyncTime: this.getLastSyncTime(),
-      pendingCount: 0, // will be queried asynchronously or updated
+      pendingCount: 0,
       lastError,
     };
     db.outbox.where('status').equals('pending').count().then((cnt) => {
@@ -85,7 +153,8 @@ class SyncEngine {
   }
 
   /**
-   * Enqueue a new report creation in outbox
+   * Enqueue a new report creation in local database and persistent outbox.
+   * Reports are guaranteed stored locally before any network attempt.
    */
   public async enqueueReportCreate(report: Report): Promise<void> {
     const idempotencyKey = uuidv4();
@@ -108,7 +177,7 @@ class SyncEngine {
         reportId: report.id,
         action: 'queued_sync',
         actorName: report.reporterName,
-        description: `Field report ${report.reportNumber || 'draft'} queued for cloud synchronization`,
+        description: `Field report ${report.reportNumber || 'draft'} saved locally and queued for synchronization`,
         newValue: 'pending',
         createdAt: new Date().toISOString(),
       });
@@ -123,16 +192,16 @@ class SyncEngine {
   }
 
   /**
-   * Enqueue a report update in outbox
+   * Enqueue a report update in local database and persistent outbox.
    */
   public async enqueueReportUpdate(
     reportId: string,
     updates: Partial<Report>,
-    actorName: string = 'Sarah J.'
+    actorName: string = 'Field Technician'
   ): Promise<void> {
     const existing = await db.reports.get(reportId);
     if (!existing) {
-      throw new Error(`Report ${reportId} not found`);
+      throw new Error(`Report ${reportId} not found in local database`);
     }
 
     const updatedReport: Report = {
@@ -162,7 +231,7 @@ class SyncEngine {
         reportId,
         action: 'queued_update',
         actorName,
-        description: `Update to report ${updatedReport.reportNumber} queued for cloud synchronization`,
+        description: `Update to report ${updatedReport.reportNumber} saved locally and queued for synchronization`,
         newValue: updates.status || 'updated',
         createdAt: new Date().toISOString(),
       });
@@ -176,15 +245,36 @@ class SyncEngine {
   }
 
   /**
-   * Execute full synchronization cycle: push outbox, pull upstream updates
+   * Concurrency Guard: Single-flight mutex wrapper.
+   * If a sync operation is already in flight, returns the active promise
+   * so multiple concurrent callers await the same execution.
    */
-  public async syncNow(): Promise<SyncResult> {
-    if (this.isSyncing) {
-      return { success: false, syncedOutboxCount: 0, pulledReportsCount: 0, error: 'Sync already in progress', timestamp: new Date().toISOString() };
+  public syncNow(): Promise<SyncResult> {
+    if (this.inFlightPromise) {
+      return this.inFlightPromise;
     }
 
+    this.inFlightPromise = this.executeSyncCycle().finally(() => {
+      this.inFlightPromise = null;
+    });
+
+    return this.inFlightPromise;
+  }
+
+  /**
+   * Core synchronization execution:
+   * 1. Push ready outbox items with exponential backoff respect.
+   * 2. Pull server-authoritative delta updates.
+   */
+  private async executeSyncCycle(): Promise<SyncResult> {
     if (getSimulatedOffline() || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-      return { success: false, syncedOutboxCount: 0, pulledReportsCount: 0, error: 'Network is offline', timestamp: new Date().toISOString() };
+      return {
+        success: false,
+        syncedOutboxCount: 0,
+        pulledReportsCount: 0,
+        error: 'Network is offline',
+        timestamp: new Date().toISOString(),
+      };
     }
 
     this.isSyncing = true;
@@ -194,50 +284,61 @@ class SyncEngine {
     let pulledReportsCount = 0;
     let syncError: string | undefined = undefined;
 
+    let itemsInFlight: OutboxItem[] = [];
+
     try {
-      // 1. PUSH OUTBOX
-      const pendingItems = await db.outbox
+      // 1. SELECT READY OUTBOX ITEMS (status = pending and nextAttemptAt <= now)
+      const nowIso = new Date().toISOString();
+      const allPending = await db.outbox
         .where('status')
         .equals('pending')
-        .limit(50)
         .toArray();
 
-      if (pendingItems.length > 0) {
-        // Mark items as syncing
-        await db.outbox.where('id').anyOf(pendingItems.map((i) => i.id)).modify({ status: 'syncing' });
+      itemsInFlight = allPending
+        .filter((item) => !item.nextAttemptAt || item.nextAttemptAt <= nowIso)
+        .slice(0, 50);
 
-        const batch: SyncBatchItem[] = pendingItems.map((item) => ({
+      if (itemsInFlight.length > 0) {
+        // Mark items as 'syncing' atomically before dispatching network request
+        await db.outbox
+          .where('id')
+          .anyOf(itemsInFlight.map((i) => i.id))
+          .modify({ status: 'syncing' });
+
+        const batch: SyncBatchItem[] = itemsInFlight.map((item) => ({
           idempotencyKey: item.idempotencyKey,
           action: item.action,
           data: JSON.parse(item.payload),
         }));
 
+        const authHeaders = await getAuthHeaders();
         const pushUrl = `${BASE_URL}/api/sync`;
         const resp = await fetch(pushUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify(batch),
         }).catch(async () => {
-          // Retry direct localhost:3001 if vite proxy failed
+          // Fallback to direct localhost if relative path / proxy failed
           return await fetch('http://localhost:3001/api/sync', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders,
             body: JSON.stringify(batch),
           });
         });
 
         if (!resp.ok) {
-          throw new Error(`Sync push failed with status ${resp.status}: ${resp.statusText}`);
+          throw new Error(`Sync push HTTP error: status ${resp.status} ${resp.statusText}`);
         }
 
         const data: SyncApiResponse = await resp.json();
         const resultsMap = new Map(data.results.map((r) => [r.idempotencyKey, r]));
 
-        // Process each outbox item result
-        for (const item of pendingItems) {
+        // Process each outbox item result according to server response
+        for (const item of itemsInFlight) {
           const res = resultsMap.get(item.idempotencyKey);
-          if (res && (res.status === 'synced' || res.status === 'conflict')) {
-            // Success! Update local report
+
+          if (res && res.status === 'synced') {
+            // SUCCESS: Server acknowledged. Now and ONLY now remove outbox item.
             await db.transaction('rw', db.reports, db.outbox, db.activityLog, async () => {
               const localReport = await db.reports.get(item.reportId);
               if (localReport) {
@@ -252,50 +353,114 @@ class SyncEngine {
                 }
                 await db.reports.update(item.reportId, updatedFields);
               }
-              // Remove outbox item
+              // Remove outbox item on positive server confirmation
               await db.outbox.delete(item.id);
+
               await db.activityLog.add({
                 id: uuidv4(),
                 reportId: item.reportId,
                 action: 'synced',
                 actorName: 'SyncEngine',
                 description: `Successfully synchronized with central NilePixel server (NP-Cloud)`,
+                newValue: 'synced',
                 createdAt: new Date().toISOString(),
               });
             });
             syncedOutboxCount++;
-          } else {
-            // Failed for this specific item
-            const newAttempts = (item.attempts || 0) + 1;
-            const newStatus = newAttempts >= 5 ? 'failed' : 'pending';
-            await db.outbox.update(item.id, {
-              attempts: newAttempts,
-              status: newStatus,
-              lastAttemptAt: new Date().toISOString(),
-            });
-            if (newStatus === 'failed') {
+          } else if (res && res.status === 'conflict') {
+            // CONFLICT: Version mismatch (OCC).
+            // NEVER remove from outbox! Mark failed, retain for user resolution, alert.
+            await db.transaction('rw', db.reports, db.outbox, db.activityLog, async () => {
+              await db.outbox.update(item.id, {
+                status: 'failed',
+                errorType: 'conflict',
+                error: res.message || 'Version conflict detected with server',
+                lastAttemptAt: new Date().toISOString(),
+              });
               await db.reports.update(item.reportId, { syncStatus: 'failed' });
+              await db.activityLog.add({
+                id: uuidv4(),
+                reportId: item.reportId,
+                action: 'conflict_detected',
+                actorName: 'SyncEngine',
+                description: `Conflict: ${res.message || 'Remote record was modified concurrently'}`,
+                newValue: 'conflict',
+                createdAt: new Date().toISOString(),
+              });
+            });
+          } else {
+            // FAILURE: Permanent validation error OR transient error
+            const errorMsg = res?.message || 'Server rejected synchronization operation';
+            const permanent = isPermanentError(errorMsg);
+
+            if (permanent) {
+              // PERMANENT VALIDATION FAILURE: Fail fast, do not retry indefinitely
+              await db.transaction('rw', db.reports, db.outbox, db.activityLog, async () => {
+                await db.outbox.update(item.id, {
+                  status: 'failed',
+                  errorType: 'validation',
+                  error: errorMsg,
+                  lastAttemptAt: new Date().toISOString(),
+                });
+                await db.reports.update(item.reportId, { syncStatus: 'failed' });
+                await db.activityLog.add({
+                  id: uuidv4(),
+                  reportId: item.reportId,
+                  action: 'sync_rejected',
+                  actorName: 'SyncEngine',
+                  description: `Permanent validation failure: ${errorMsg}`,
+                  newValue: 'validation_error',
+                  createdAt: new Date().toISOString(),
+                });
+              });
+            } else {
+              // TRANSIENT ERROR: Retry with exponential backoff and jitter
+              const newAttempts = (item.attempts || 0) + 1;
+              if (newAttempts >= MAX_RETRY_ATTEMPTS) {
+                await db.transaction('rw', db.reports, db.outbox, db.activityLog, async () => {
+                  await db.outbox.update(item.id, {
+                    status: 'failed',
+                    errorType: 'transient',
+                    attempts: newAttempts,
+                    error: `Exceeded maximum retry attempts (${MAX_RETRY_ATTEMPTS}): ${errorMsg}`,
+                    lastAttemptAt: new Date().toISOString(),
+                  });
+                  await db.reports.update(item.reportId, { syncStatus: 'failed' });
+                });
+              } else {
+                const backoffDelay = calculateBackoffDelay(newAttempts);
+                const nextAttemptAt = new Date(Date.now() + backoffDelay).toISOString();
+                await db.outbox.update(item.id, {
+                  status: 'pending',
+                  attempts: newAttempts,
+                  lastAttemptAt: new Date().toISOString(),
+                  nextAttemptAt,
+                  error: errorMsg,
+                  errorType: 'transient',
+                });
+              }
             }
           }
         }
       }
 
-      // 2. PULL UPSTREAM UPDATES
+      // 2. PULL SERVER-AUTHORITATIVE DELTA UPDATES
       const lastSync = this.getLastSyncTime();
       let pullUrl = `${BASE_URL}/api/reports`;
       if (lastSync) {
         pullUrl += `?since=${encodeURIComponent(lastSync)}`;
       }
 
+      const pullHeaders = { ...(await getAuthHeaders()), 'Cache-Control': 'no-cache' };
       const pullResp = await fetch(pullUrl, {
         method: 'GET',
-        headers: { 'Cache-Control': 'no-cache' },
+        headers: pullHeaders,
       }).catch(async () => {
         let url3001 = 'http://localhost:3001/api/reports';
         if (lastSync) url3001 += `?since=${encodeURIComponent(lastSync)}`;
         return await fetch(url3001, {
           method: 'GET',
-          headers: { 'Cache-Control': 'no-cache' },
+          headers: pullHeaders,
         });
       });
 
@@ -303,11 +468,11 @@ class SyncEngine {
         const pullData = await pullResp.json();
         const incomingReports: Report[] = Array.isArray(pullData)
           ? pullData
-          : pullData.reports || [];
+          : pullData.reports || pullData.data || [];
 
         for (const remoteReport of incomingReports) {
           const local = await db.reports.get(remoteReport.id);
-          // Only overwrite if local report isn't currently pending in outbox with higher version
+          // Only overwrite if local report doesn't have an uncommitted pending outbox change with a higher/conflicting version
           const pendingForReport = await db.outbox.where('reportId').equals(remoteReport.id).first();
           if (!pendingForReport) {
             await db.reports.put({
@@ -316,7 +481,6 @@ class SyncEngine {
             });
             pulledReportsCount++;
           } else if (local && remoteReport.version > local.version) {
-            // Conflict or server has newer version
             await db.reports.put({
               ...remoteReport,
               syncStatus: 'synced',
@@ -326,22 +490,45 @@ class SyncEngine {
         }
       }
 
-      const nowIso = new Date().toISOString();
-      this.setLastSyncTime(nowIso);
+      const now = new Date().toISOString();
+      this.setLastSyncTime(now);
 
       return {
         success: true,
         syncedOutboxCount,
         pulledReportsCount,
-        timestamp: nowIso,
+        timestamp: now,
       };
     } catch (err: any) {
-      syncError = err.message || 'Sync failed';
-      // Reset any syncing items back to pending so they can retry
-      await db.outbox.where('status').equals('syncing').modify({
-        status: 'pending',
-        lastAttemptAt: new Date().toISOString(),
-      });
+      syncError = err.message || 'Sync network failure';
+
+      // RECOVERY: On network error / disconnect during upload, restore in-flight items
+      // Calculate backoff so they are scheduled for retry rather than immediately hammered
+      for (const item of itemsInFlight) {
+        const attempts = (item.attempts || 0) + 1;
+        if (attempts >= MAX_RETRY_ATTEMPTS) {
+          await db.outbox.update(item.id, {
+            status: 'failed',
+            attempts,
+            error: syncError,
+            errorType: 'transient',
+            lastAttemptAt: new Date().toISOString(),
+          }).catch(() => {});
+          await db.reports.update(item.reportId, { syncStatus: 'failed' }).catch(() => {});
+        } else {
+          const delay = calculateBackoffDelay(attempts);
+          const nextAttemptAt = new Date(Date.now() + delay).toISOString();
+          await db.outbox.update(item.id, {
+            status: 'pending',
+            attempts,
+            error: syncError,
+            errorType: 'transient',
+            lastAttemptAt: new Date().toISOString(),
+            nextAttemptAt,
+          }).catch(() => {});
+        }
+      }
+
       return {
         success: false,
         syncedOutboxCount,
