@@ -1,85 +1,78 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
-import { BottomNav, NavTab } from './components/BottomNav';
+import { BottomNav } from './components/BottomNav';
 import { DashboardPage } from './pages/DashboardPage';
 import { AllReportsPage } from './pages/AllReportsPage';
 import { CreateReportPage } from './pages/CreateReportPage';
 import { ReportDetailPage } from './pages/ReportDetailPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { MyReportsPage } from './pages/MyReportsPage';
 import { ActivityPage } from './pages/ActivityPage';
-import { seedDatabaseIfEmpty } from './db/db';
-import { useUserRole } from './hooks/useUserRole';
+import { SettingsPage } from './pages/SettingsPage';
+import { AuthPage } from './pages/AuthPage';
 
-export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
-  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
-  const { user } = useUserRole();
+const AppContent: React.FC = () => {
+  const { session, loading } = useAuth();
 
-  useEffect(() => {
-    seedDatabaseIfEmpty().catch(console.error);
-  }, []);
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-surface flex flex-col justify-center items-center">
+        <div className="w-8 h-8 border-3 border-secondary border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-xs font-mono text-on-surface-variant">Connecting to Supabase Auth...</p>
+      </div>
+    );
+  }
 
-  const handleSelectReport = (reportId: string) => {
-    setSelectedReportId(reportId);
-  };
-
-  const handleBackFromDetail = () => {
-    setSelectedReportId(null);
-  };
-
-  const handleCreateSuccess = (reportId: string) => {
-    setSelectedReportId(reportId);
-  };
-
-  const handleTabChange = (tab: NavTab) => {
-    setSelectedReportId(null);
-    setActiveTab(tab);
-  };
+  if (!session) {
+    return <AuthPage />;
+  }
 
   return (
     <div className="min-h-screen bg-surface flex flex-col font-sans">
-      <Header onNavigateSettings={() => handleTabChange('settings')} />
+      <Header />
 
-      <main className="flex-1">
-        {selectedReportId ? (
-          <ReportDetailPage
-            reportId={selectedReportId}
-            onBack={handleBackFromDetail}
-          />
-        ) : activeTab === 'dashboard' ? (
-          <DashboardPage
-            onNavigateCreate={() => handleTabChange('create')}
-            onNavigateAll={() => handleTabChange('all')}
-            onSelectReport={handleSelectReport}
-          />
-        ) : activeTab === 'all' ? (
-          <AllReportsPage
-            onSelectReport={handleSelectReport}
-            onNavigateCreate={() => handleTabChange('create')}
-          />
-        ) : activeTab === 'create' ? (
-          <CreateReportPage
-            onBack={() => handleTabChange('dashboard')}
-            onSuccess={handleCreateSuccess}
-          />
-        ) : activeTab === 'mine' ? (
-          <AllReportsPage
-            onSelectReport={handleSelectReport}
-            onNavigateCreate={() => handleTabChange('create')}
-            initialFilter={{ reporterId: user.id }}
-          />
-        ) : activeTab === 'activity' ? (
-          <ActivityPage />
-        ) : activeTab === 'settings' ? (
-          <SettingsPage />
-        ) : null}
+      <main className="flex-1 pb-16 md:pb-6">
+        <Routes>
+          {/* 1. Dashboard */}
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
+
+          {/* 2. Report Creation */}
+          <Route path="/create" element={<CreateReportPage />} />
+
+          {/* 3. All Reports */}
+          <Route path="/reports" element={<AllReportsPage />} />
+
+          {/* 4. Report Details */}
+          <Route path="/reports/:id" element={<ReportDetailPage />} />
+
+          {/* 5. My Reports */}
+          <Route path="/my-reports" element={<MyReportsPage />} />
+
+          {/* 6. Activity History */}
+          <Route path="/activity" element={<ActivityPage />} />
+
+          {/* 7. Settings */}
+          <Route path="/settings" element={<SettingsPage />} />
+
+          {/* Catch-all fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
-      <BottomNav
-        activeTab={activeTab}
-        onSelectTab={handleTabChange}
-      />
+      <BottomNav />
     </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </BrowserRouter>
   );
 };
 
