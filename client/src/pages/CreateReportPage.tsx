@@ -191,7 +191,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-28 space-y-6">
+    <div className="max-w-3xl mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-6">
       {/* Navigation Header */}
       <div className="flex items-center justify-between">
         <button
@@ -242,7 +242,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Water Point Alpha-4 Pump High Pressure Leakage"
-            className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${
+            className={`w-full px-3.5 py-2.5 rounded-xl border text-base sm:text-sm focus:outline-none focus:ring-2 transition-all min-h-[44px] ${
               errors.title
                 ? 'border-rose-400 focus:ring-rose-200'
                 : 'border-surface-container focus:ring-secondary/20 focus:border-secondary'
@@ -269,7 +269,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
                   type="button"
                   key={cat}
                   onClick={() => setCategory(cat)}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-medium transition-all ${
+                  className={`flex flex-col items-center justify-center p-3 rounded-xl border text-xs font-semibold transition-all min-h-[52px] cursor-pointer ${
                     active
                       ? 'bg-secondary text-white border-secondary shadow-md scale-[1.02]'
                       : 'bg-surface-container-lowest border-surface-container-high text-on-surface hover:bg-surface-container-low'
@@ -307,7 +307,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
                   type="button"
                   key={p}
                   onClick={() => setPriority(p)}
-                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold tracking-wide transition-all ${
+                  className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold tracking-wide transition-all min-h-[44px] cursor-pointer ${
                     active
                       ? `${style.bgActive} ${style.borderActive} shadow-md ring-2 ring-offset-1 ring-secondary/30 scale-[1.02]`
                       : 'bg-surface-container-lowest border-surface-container-high text-on-surface hover:bg-surface-container-low'
@@ -347,7 +347,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
                 value={locationName}
                 onChange={(e) => setLocationName(e.target.value)}
                 placeholder="e.g. Sector 4 - Alpha Wellhead"
-                className="w-full bg-surface-container-lowest px-3 py-1.5 rounded-lg border border-surface-container text-xs"
+                className="w-full bg-surface-container-lowest px-3 py-2 rounded-lg border border-surface-container text-base sm:text-xs min-h-[40px]"
               />
             </div>
             <div className="flex items-center gap-3">
@@ -387,7 +387,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Document observed anomalies, equipment part numbers, environmental hazards, immediate safety interventions performed..."
             maxLength={2000}
-            className={`w-full px-3.5 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all ${
+            className={`w-full px-3.5 py-2.5 rounded-xl border text-base sm:text-sm focus:outline-none focus:ring-2 transition-all ${
               errors.description
                 ? 'border-rose-400 focus:ring-rose-200'
                 : 'border-surface-container focus:ring-secondary/20 focus:border-secondary'
@@ -465,7 +465,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
             type="button"
             disabled={isSaving}
             onClick={() => handleSave(true)}
-            className="px-4 py-2.5 rounded-xl border border-surface-container text-xs font-semibold text-on-surface hover:bg-surface-container-low transition-colors text-center"
+            className="w-full sm:w-auto px-5 py-3 rounded-xl border border-surface-container text-xs font-bold text-on-surface hover:bg-surface-container-low transition-colors text-center min-h-[44px] cursor-pointer"
           >
             Save as Local Draft
           </button>
@@ -473,7 +473,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
             type="button"
             disabled={isSaving}
             onClick={() => handleSave(false)}
-            className="px-6 py-2.5 rounded-xl bg-secondary text-white text-xs font-bold tracking-wide hover:bg-secondary-container transition-colors shadow-md flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-secondary text-white text-xs font-bold tracking-wide hover:bg-secondary-container transition-colors shadow-md flex items-center justify-center gap-2 min-h-[44px] cursor-pointer"
           >
             <Sparkles className="w-4 h-4 text-tertiary-fixed" />
             <span>{isSaving ? 'Storing in Cache...' : 'Submit Report (Store & Queue Sync)'}</span>
