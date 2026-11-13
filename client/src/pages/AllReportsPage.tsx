@@ -130,7 +130,7 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 pb-28 space-y-5">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-5 pb-28 space-y-4 sm:space-y-5">
       {/* Offline Cache Retention Bar */}
       <div className="bg-surface-container-lowest border border-surface-container-high rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -221,13 +221,13 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
       {/* Live Search & Filter Bar */}
       <div className="space-y-3">
         <div className="relative">
-          <Search className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search reports by title, ID (#NP-8821), location, or description..."
-            className="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-surface-container-high rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all"
+            className="w-full pl-10 pr-4 py-2.5 bg-surface-container-lowest border border-surface-container-high rounded-xl text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
           />
         </div>
 
