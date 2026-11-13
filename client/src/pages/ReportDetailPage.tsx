@@ -144,7 +144,7 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-28 space-y-6">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-6">
       {/* Top Bar Navigation */}
       <div className="flex items-center justify-between">
         <button
