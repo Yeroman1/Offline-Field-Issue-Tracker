@@ -1,4 +1,4 @@
-import prisma from '../src/lib/prisma';
+import { prisma } from '../src/config/database';
 import { seedDatabase } from '../src/lib/seedData';
 
 export { seedDatabase };
