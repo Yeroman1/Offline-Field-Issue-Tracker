@@ -32,7 +32,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-surface flex flex-col font-sans">
       <Header />
 
-      <main className="flex-1 pb-16 md:pb-6">
+      <main className="flex-1 pb-20 md:pb-8 max-w-full overflow-x-hidden">
         <Routes>
           {/* 1. Dashboard */}
           <Route path="/" element={<DashboardPage />} />
