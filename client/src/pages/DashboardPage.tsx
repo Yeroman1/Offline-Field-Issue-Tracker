@@ -118,7 +118,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+    <div className="space-y-6 pb-24 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-4">
       {/* Offline Sync Health Card */}
       <div className="bg-gradient-to-r from-primary via-primary-container to-secondary/40 text-white rounded-2xl p-5 shadow-lg border border-slate-700/60 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-tertiary-fixed/5 rounded-full blur-3xl pointer-events-none" />
@@ -204,7 +204,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       </div>
 
       {/* Bento Telemetry Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Pending Sync */}
         <div className="bg-surface-container-lowest border border-surface-container-high p-4 rounded-2xl shadow-sm">
           <div className="flex items-center justify-between text-xs font-medium text-on-surface-variant">
