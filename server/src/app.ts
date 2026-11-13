@@ -35,10 +35,11 @@ app.use(
     origin: (origin, callback) => {
       // Allow non-browser requests without origin header (e.g. curl, uptime monitors, health checks)
       if (!origin) return callback(null, true);
-      if (configuredOrigins.includes(origin) || env.CORS_ORIGIN === '*') {
+      if (configuredOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+      // Reject cross-origin requests from unwhitelisted domains
+      return callback(null, false);
     },
     credentials: true,
   })
