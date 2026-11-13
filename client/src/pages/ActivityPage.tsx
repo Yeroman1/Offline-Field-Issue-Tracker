@@ -15,7 +15,7 @@ export const ActivityPage: React.FC = () => {
   ) || [];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-28 space-y-6">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-6">
       <div>
         <h1 className="text-xl font-bold text-on-surface">Field Operations Activity & Outbox</h1>
         <p className="text-xs text-on-surface-variant mt-0.5">
