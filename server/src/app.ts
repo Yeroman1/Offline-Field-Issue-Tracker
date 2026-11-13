@@ -12,10 +12,34 @@ import { generalLimiter } from './middleware/rateLimiter.middleware';
 
 export const app = express();
 
-// 1. Cross-Origin Resource Sharing (CORS)
+// Disable technology disclosure header
+app.disable('x-powered-by');
+
+// Trust reverse proxy (e.g. Render, Cloudflare) for accurate client IP rate limiting
+app.set('trust proxy', 1);
+
+// 1. Cross-Origin Resource Sharing (CORS) with strict origin whitelisting
+const defaultAllowedOrigins = [
+  'https://nilepixel-field-tracker-client.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:4173',
+];
+
+const configuredOrigins = env.CORS_ORIGIN === '*'
+  ? defaultAllowedOrigins
+  : env.CORS_ORIGIN.split(',').map((o) => o.trim());
+
 app.use(
   cors({
-    origin: env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN.split(','),
+    origin: (origin, callback) => {
+      // Allow non-browser requests without origin header (e.g. curl, uptime monitors, health checks)
+      if (!origin) return callback(null, true);
+      if (configuredOrigins.includes(origin) || env.CORS_ORIGIN === '*') {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     credentials: true,
   })
 );

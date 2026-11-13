@@ -4,7 +4,12 @@ import { sendCreated, sendSuccess, sendPaginated } from '../utils/response.util'
 
 export async function createReport(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const result = await reportService.createReport(req.body, req.body);
+    const payload = {
+      ...req.body,
+      reporterId: req.actor?.id || req.body.reporterId,
+      reporterName: req.actor?.fullName || req.actor?.name || req.body.reporterName,
+    };
+    const result = await reportService.createReport(payload, req.body);
     sendCreated(res, result, 'Report created and synchronized successfully');
   } catch (error) {
     next(error);

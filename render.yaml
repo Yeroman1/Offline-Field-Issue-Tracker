@@ -18,13 +18,15 @@ services:
       - key: PORT
         value: 10000
       - key: DATABASE_URL
-        value: postgresql://postgres.rmfkkpmfnymvksyvdjyy:RidzTKaqHAF57wd4@aws-1-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require
+        sync: false
       - key: DIRECT_URL
-        value: postgresql://postgres.rmfkkpmfnymvksyvdjyy:RidzTKaqHAF57wd4@aws-1-eu-north-1.pooler.supabase.com:5432/postgres?sslmode=require
+        sync: false
       - key: SUPABASE_URL
-        value: https://rmfkkpmfnymvksyvdjyy.supabase.co
+        sync: false
       - key: SUPABASE_ANON_KEY
-        value: sb_publishable_vdTAubPm21xSVSXmclCv2A_bTQZhgrn
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
 
   # 2. Frontend React PWA Static Site (Free on Render Global CDN)
   - type: web
@@ -39,8 +41,8 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_SUPABASE_URL
-        value: https://rmfkkpmfnymvksyvdjyy.supabase.co
+        sync: false
       - key: VITE_SUPABASE_ANON_KEY
-        value: sb_publishable_vdTAubPm21xSVSXmclCv2A_bTQZhgrn
+        sync: false
       - key: VITE_API_BASE_URL
-        value: https://nilepixel-field-tracker-api.onrender.com
+        sync: false

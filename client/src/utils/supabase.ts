@@ -9,8 +9,14 @@ if (typeof globalThis.WebSocket === 'undefined') {
   };
 }
 
-const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || 'https://rmfkkpmfnymvksyvdjyy.supabase.co';
-const supabaseKey = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_vdTAubPm21xSVSXmclCv2A_bTQZhgrn';
+const supabaseUrl = import.meta.env?.VITE_SUPABASE_URL || '';
+const supabaseKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+
+if (!supabaseUrl || !supabaseKey) {
+  if (import.meta.env?.DEV) {
+    console.warn('Notice: VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is not defined in environment.');
+  }
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
