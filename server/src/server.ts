@@ -1,7 +1,6 @@
 import app from './app';
 import { prisma } from './config/database';
 import { env } from './config/env';
-import { seedDatabase } from './lib/seedData';
 
 const PORT = env.PORT || 3001;
 

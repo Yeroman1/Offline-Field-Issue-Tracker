@@ -56,8 +56,8 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
   // Action dialog state
   const [targetStatus, setTargetStatus] = useState<ReportStatus | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
-  const [assignedTo, setAssignedTo] = useState('Ahmed K.');
-  const [assignedTeam, setAssignedTeam] = useState('Hydro Rapid Response Alpha');
+  const [assignedTo, setAssignedTo] = useState('');
+  const [assignedTeam, setAssignedTeam] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
@@ -341,6 +341,7 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
                       type="text"
                       value={assignedTo}
                       onChange={(e) => setAssignedTo(e.target.value)}
+                      placeholder="e.g. Technician or Coordinator Name"
                       className="w-full px-3 py-1.5 bg-surface-container-lowest rounded-lg border border-surface-container"
                     />
                   </div>
@@ -350,6 +351,7 @@ export const ReportDetailPage: React.FC<ReportDetailPageProps> = ({
                       type="text"
                       value={assignedTeam}
                       onChange={(e) => setAssignedTeam(e.target.value)}
+                      placeholder="e.g. Rapid Response Team Alpha"
                       className="w-full px-3 py-1.5 bg-surface-container-lowest rounded-lg border border-surface-container"
                     />
                   </div>

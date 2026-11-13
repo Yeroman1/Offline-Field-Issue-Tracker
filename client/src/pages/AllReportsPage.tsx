@@ -484,7 +484,7 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
 
       {/* Floating "+ New Report" Action Button */}
       <button
-        onClick={onNavigateCreate}
+        onClick={handleCreate}
         className="fixed bottom-20 right-4 sm:right-8 z-40 bg-secondary hover:bg-secondary-container text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-2 font-bold text-xs tracking-wider uppercase transition-transform hover:scale-105 active:scale-95 border-2 border-surface"
       >
         <Plus className="w-5 h-5 text-tertiary-fixed" />

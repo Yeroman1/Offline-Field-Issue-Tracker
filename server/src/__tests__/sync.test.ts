@@ -37,6 +37,7 @@ describe('Synchronization Endpoints', () => {
     await prisma.statusTransition.deleteMany({ where: { reportId } });
     await prisma.syncMetadata.deleteMany({ where: { reportId } });
     await prisma.report.deleteMany({ where: { id: reportId } });
+    await prisma.userProfile.deleteMany({ where: { id: reporterId } });
     await prisma.idempotencyRecord.deleteMany({ where: { key: idempotencyKey } });
     await prisma.$disconnect();
   });

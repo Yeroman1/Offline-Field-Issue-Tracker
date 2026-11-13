@@ -43,6 +43,7 @@ describe('Reports API (/api/reports)', () => {
     await prisma.activityLog.deleteMany({ where: { actorId: reporterId } });
     await prisma.statusTransition.deleteMany({ where: { actorId: reporterId } });
     await prisma.report.deleteMany({ where: { reporterId } });
+    await prisma.userProfile.deleteMany({ where: { id: reporterId } });
     await prisma.idempotencyRecord.deleteMany({ where: { key: idempotencyKey1 } });
     await prisma.$disconnect();
   });

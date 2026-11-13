@@ -38,6 +38,7 @@ describe('Status Transition API (PATCH /api/reports/:id/status)', () => {
     await prisma.activityLog.deleteMany({ where: { reportId } });
     await prisma.statusTransition.deleteMany({ where: { reportId } });
     await prisma.report.deleteMany({ where: { id: reportId } });
+    await prisma.userProfile.deleteMany({ where: { id: { in: [reporterId, coordinatorId] } } });
     await prisma.idempotencyRecord.deleteMany({ where: { key: idempotencyKey } });
     await prisma.$disconnect();
   });

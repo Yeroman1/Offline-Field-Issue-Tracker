@@ -46,11 +46,12 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
   const [category, setCategory] = useState<ReportCategory>('Water');
   const [priority, setPriority] = useState<ReportPriority>('High');
   const [description, setDescription] = useState('');
-  const [locationName, setLocationName] = useState('Sector 4 - Alpha Wellhead');
-  const [latitude, setLatitude] = useState<number>(30.0444);
-  const [longitude, setLongitude] = useState<number>(31.2357);
-  const [locationAccuracy, setLocationAccuracy] = useState<number>(3.8);
+  const [locationName, setLocationName] = useState('');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
 
   // Photo state
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
@@ -64,6 +65,7 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
   // Capture GPS coordinates
   const captureGPS = () => {
     setIsLocating(true);
+    setLocationNotice(null);
     if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
@@ -72,16 +74,14 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
           setLocationAccuracy(Number(pos.coords.accuracy.toFixed(1)));
           setIsLocating(false);
         },
-        () => {
-          // Fallback realistic Nile basin field coordinates
-          setLatitude(30.0444 + (Math.random() - 0.5) * 0.02);
-          setLongitude(31.2357 + (Math.random() - 0.5) * 0.02);
-          setLocationAccuracy(4.1);
+        (err) => {
+          setLocationNotice(`GPS unavailable (${err.message}). Enter location description.`);
           setIsLocating(false);
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
     } else {
+      setLocationNotice('Geolocation not supported by device hardware.');
       setIsLocating(false);
     }
   };
@@ -123,8 +123,8 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
       category,
       priority,
       description,
-      latitude,
-      longitude,
+      latitude: latitude ?? undefined,
+      longitude: longitude ?? undefined,
     };
 
     if (!asDraft) {
@@ -159,11 +159,11 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
         priority,
         status: initialStatus,
         syncStatus: 'pending',
-        latitude,
-        longitude,
-        locationName: locationName.trim() || 'Field Station Coordinate',
-        locationAccuracy,
-        reporterName: profile?.fullName || user?.email || 'Field Reporter',
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
+        locationName: locationName.trim() || undefined,
+        locationAccuracy: locationAccuracy ?? undefined,
+        reporterName: profile?.fullName || user?.email || 'Field Operator',
         reporterId: user?.id || 'unauthenticated',
         photoUrl: photoDataUrl || undefined,
         photoCount: photoDataUrl ? 1 : 0,
@@ -346,23 +346,30 @@ export const CreateReportPage: React.FC<CreateReportPageProps> = ({
                 type="text"
                 value={locationName}
                 onChange={(e) => setLocationName(e.target.value)}
-                placeholder="e.g. Sector 4 - Alpha Wellhead"
+                placeholder="e.g. Sector 4 - Wellhead or Kilometer Post"
                 className="w-full bg-surface-container-lowest px-3 py-2 rounded-lg border border-surface-container text-base sm:text-xs min-h-[40px]"
               />
+              {locationNotice && (
+                <p className="text-[11px] text-amber-700 mt-1">{locationNotice}</p>
+              )}
             </div>
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <label className="text-on-surface-variant block mb-1">GPS Coordinates</label>
                 <div className="font-mono bg-surface-container-lowest px-3 py-1.5 rounded-lg border border-surface-container text-xs text-on-surface">
-                  {latitude.toFixed(4)}° N, {longitude.toFixed(4)}° E
+                  {latitude !== null && longitude !== null
+                    ? `${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`
+                    : 'GPS coordinates not acquired'}
                 </div>
               </div>
-              <div>
-                <label className="text-on-surface-variant block mb-1">Precision</label>
-                <span className="inline-block font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1.5 rounded-lg text-xs font-semibold">
-                  ±{locationAccuracy}m
-                </span>
-              </div>
+              {locationAccuracy !== null && (
+                <div>
+                  <label className="text-on-surface-variant block mb-1">Precision</label>
+                  <span className="inline-block font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-1.5 rounded-lg text-xs font-semibold">
+                    ±{locationAccuracy}m
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
