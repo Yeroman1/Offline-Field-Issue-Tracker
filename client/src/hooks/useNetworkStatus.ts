@@ -50,16 +50,19 @@ export function useNetworkStatus(): NetworkStatus {
 
     const start = performance.now();
     try {
-      // Use relative endpoint /api/health or fallback to port 3001
+      // Check API health endpoint (respecting VITE_API_BASE_URL if configured)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      const res = await fetch('/api/health', {
+      const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+      const healthUrl = apiBase ? `${apiBase}/api/health` : '/api/health';
+
+      const res = await fetch(healthUrl, {
         method: 'GET',
         headers: { 'Cache-Control': 'no-cache' },
         signal: controller.signal,
       }).catch(async () => {
-        // Fallback to explicit localhost:3001
+        // Fallback to explicit localhost:3001 in local dev
         return await fetch('http://localhost:3001/api/health', {
           method: 'GET',
           headers: { 'Cache-Control': 'no-cache' },

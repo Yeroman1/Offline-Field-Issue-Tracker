@@ -17,9 +17,10 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return headers;
 }
 
-const BASE_URL = typeof window !== 'undefined' && window.location.origin
-  ? '' // use relative URL with Vite proxy
-  : 'http://localhost:3001';
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const BASE_URL = API_BASE || (typeof window !== 'undefined' && window.location.origin
+  ? '' // use relative URL with proxy or same-domain deployment
+  : 'http://localhost:3001');
 
 const LAST_SYNC_KEY = 'nilepixel_last_sync_timestamp';
 export const MAX_RETRY_ATTEMPTS = 5;
