@@ -5,14 +5,15 @@
 </div>
 
 **NilePixel Technologies — Cohort 1 Individual Graduation Project**  
-**Student:** [Student Full Name]  
-**Repository:** Public GitHub Repository  
-**Live Demo:** [Deployed Link if available]  
-**Evaluation Track:** Offline-First Full-Stack Application  
+**Student:** Yeroman Diriba Guteta  
+**Repository:** https://github.com/Yeroman1/Offline-Field-Issue-Tracker  
+**Live Demo:** https://nilepixel-field-tracker-client.onrender.com/
+**Evaluation Track:** Offline-First Full-Stack Application
 
 ---
 
 ## 📋 Table of Contents
+
 1. [Project Overview](#project-overview)
 2. [Key Capabilities & Feature Pillars](#key-capabilities--feature-pillars)
 3. [Architecture & Technology Stack](#architecture--technology-stack)
@@ -41,14 +42,14 @@ A simulated **Coordinator Mode** enables supervisors to review triage queues, ve
 
 ## 2. Key Capabilities & Feature Pillars
 
-* 📶 **Zero-Latency Offline Creation**: Complete report authoring (category, description, GPS coordinates, priority matrix, timestamp, local photo blobs) operates 100% offline.
-* 💾 **Guaranteed Persistence**: Local records and pending queues survive page reloads, tab closures, and device restarts.
-* 🔄 **Resilient Sync Engine with Outbox Queue**: Automatic connection detection (`navigator.onLine` + `/api/health` heartbeat ping) triggers background push/pull sync with exponential backoff retry.
-* 🛡️ **Duplicate Prevention via Idempotency**: Every outbox item carries a client-generated UUIDv4 `idempotencyKey`. The backend caches and deduplicates replayed submissions.
-* 🚦 **Audited State Machine**: Enforces strict lifecycle transitions (`Draft` → `Submitted` → `Assigned` → `In Progress` → `Resolved`, plus `Rejected` and reopen flows).
-* 📜 **Full Activity Audit Trail**: Tracks creation, offline cache events, sync transmissions, status changes, and reassignment history.
-* 🎭 **Role Simulation**: Instant toggle between **Field Worker (Sarah J.)** and **Coordinator (Ahmed K.)** without authentication overhead.
-* 🧪 **Comprehensive Automated Testing**: 50+ unit and integration tests across backend and frontend covering state machines, idempotency, batch sync, and validation.
+- 📶 **Zero-Latency Offline Creation**: Complete report authoring (category, description, GPS coordinates, priority matrix, timestamp, local photo blobs) operates 100% offline.
+- 💾 **Guaranteed Persistence**: Local records and pending queues survive page reloads, tab closures, and device restarts.
+- 🔄 **Resilient Sync Engine with Outbox Queue**: Automatic connection detection (`navigator.onLine` + `/api/health` heartbeat ping) triggers background push/pull sync with exponential backoff retry.
+- 🛡️ **Duplicate Prevention via Idempotency**: Every outbox item carries a client-generated UUIDv4 `idempotencyKey`. The backend caches and deduplicates replayed submissions.
+- 🚦 **Audited State Machine**: Enforces strict lifecycle transitions (`Draft` → `Submitted` → `Assigned` → `In Progress` → `Resolved`, plus `Rejected` and reopen flows).
+- 📜 **Full Activity Audit Trail**: Tracks creation, offline cache events, sync transmissions, status changes, and reassignment history.
+- 🎭 **Role Simulation**: Instant toggle between **Field Worker (Sarah J.)** and **Coordinator (Ahmed K.)** without authentication overhead.
+- 🧪 **Comprehensive Automated Testing**: 50+ unit and integration tests across backend and frontend covering state machines, idempotency, batch sync, and validation.
 
 ---
 
@@ -94,16 +95,18 @@ A simulated **Coordinator Mode** enables supervisors to review triage queues, ve
 ```
 
 ### Stack Components
-* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Dexie.js (IndexedDB wrapper), Lucide Icons / Material Symbols.
-* **Backend**: Node.js, Express, TypeScript, Prisma ORM, Zod, UUID.
-* **Storage**: SQLite (`file:./dev.db`) by default for zero-configuration testing; fully compatible with PostgreSQL via Prisma `DATABASE_URL`.
-* **Testing**: Vitest, Supertest.
+
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Dexie.js (IndexedDB wrapper), Lucide Icons / Material Symbols.
+- **Backend**: Node.js, Express, TypeScript, Prisma ORM, Zod, UUID.
+- **Storage**: SQLite (`file:./dev.db`) by default for zero-configuration testing; fully compatible with PostgreSQL via Prisma `DATABASE_URL`.
+- **Testing**: Vitest, Supertest.
 
 ---
 
 ## 4. Offline-First & Synchronization Strategy
 
 ### The Transactional Outbox Pattern
+
 1. When a user submits an issue offline:
    - A `Report` record is written to IndexedDB with `syncStatus: "pending"`.
    - An `Outbox` intent entry is committed in the same local transaction with an `idempotencyKey` (UUIDv4).
@@ -119,8 +122,9 @@ A simulated **Coordinator Mode** enables supervisors to review triage queues, ve
    - An `activityLog` event is recorded.
 
 ### Duplicate Prevention & Network Drops
-* **Problem**: A field technician submits a report, the server processes it, but the cellular tower drops before the HTTP 200 response reaches the phone.
-* **Solution**: The client's next retry sends the *identical* `idempotencyKey`. The backend's `IdempotencyRecord` table intercepts the request, notes that it was previously processed, and returns the cached success payload without inserting a duplicate report.
+
+- **Problem**: A field technician submits a report, the server processes it, but the cellular tower drops before the HTTP 200 response reaches the phone.
+- **Solution**: The client's next retry sends the _identical_ `idempotencyKey`. The backend's `IdempotencyRecord` table intercepts the request, notes that it was previously processed, and returns the cached success payload without inserting a duplicate report.
 
 ---
 
@@ -157,14 +161,15 @@ A simulated **Coordinator Mode** enables supervisors to review triage queues, ve
 ```
 
 ### Valid Transition Matrix
-| Source Status | Allowed Target Statuses | Actor Required |
-|:---|:---|:---|
-| `draft` | `submitted` | Field Worker |
-| `submitted` | `assigned`, `rejected` | Coordinator |
-| `assigned` | `in_progress`, `rejected` | Coordinator |
-| `in_progress` | `resolved`, `assigned` | Coordinator |
-| `rejected` | `submitted` (resubmission) | Field Worker |
-| `resolved` | `in_progress` (reopen) | Coordinator |
+
+| Source Status | Allowed Target Statuses    | Actor Required |
+| :------------ | :------------------------- | :------------- |
+| `draft`       | `submitted`                | Field Worker   |
+| `submitted`   | `assigned`, `rejected`     | Coordinator    |
+| `assigned`    | `in_progress`, `rejected`  | Coordinator    |
+| `in_progress` | `resolved`, `assigned`     | Coordinator    |
+| `rejected`    | `submitted` (resubmission) | Field Worker   |
+| `resolved`    | `in_progress` (reopen)     | Coordinator    |
 
 Any attempt to execute an invalid transition (e.g., `draft → resolved` or `submitted → in_progress`) is rejected by the server with HTTP **422 Unprocessable Entity**.
 
@@ -173,41 +178,46 @@ Any attempt to execute an invalid transition (e.g., `draft → resolved` or `sub
 ## 6. Data Model & Database Schema
 
 ### Report Entity
-* `id` (String UUIDv4, Primary Key)
-* `reportNumber` (String, Unique, e.g. `NP-8820`)
-* `title` (String, summary)
-* `description` (Text, detailed observations)
-* `category` (`broken_water` | `damaged_equipment` | `service_interruption` | `safety_concern` | `maintenance_required`)
-* `priority` (`low` | `medium` | `high` | `critical`)
-* `status` (`draft` | `submitted` | `assigned` | `in_progress` | `resolved` | `rejected`)
-* `syncStatus` (`pending` | `synced` | `failed`)
-* `latitude`, `longitude`, `locationName`, `locationAccuracy`
-* `reporterName`, `reporterId`
-* `assignedTo`, `assignedTeam`
-* `resolutionNotes`, `resolvedBy`, `resolvedAt`
-* `version` (Integer, optimistic concurrency counter)
-* `createdAt`, `updatedAt` (Timestamps)
+
+- `id` (String UUIDv4, Primary Key)
+- `reportNumber` (String, Unique, e.g. `NP-8820`)
+- `title` (String, summary)
+- `description` (Text, detailed observations)
+- `category` (`broken_water` | `damaged_equipment` | `service_interruption` | `safety_concern` | `maintenance_required`)
+- `priority` (`low` | `medium` | `high` | `critical`)
+- `status` (`draft` | `submitted` | `assigned` | `in_progress` | `resolved` | `rejected`)
+- `syncStatus` (`pending` | `synced` | `failed`)
+- `latitude`, `longitude`, `locationName`, `locationAccuracy`
+- `reporterName`, `reporterId`
+- `assignedTo`, `assignedTeam`
+- `resolutionNotes`, `resolvedBy`, `resolvedAt`
+- `version` (Integer, optimistic concurrency counter)
+- `createdAt`, `updatedAt` (Timestamps)
 
 ### ActivityLog Entity
-* `id` (String UUIDv4)
-* `reportId` (Foreign Key to Report)
-* `action` (`created` | `submitted` | `synced` | `status_changed` | `assigned` | `resolved` | `rejected` | `conflict_resolved`)
-* `actorName`, `description`, `previousValue`, `newValue`, `createdAt`
+
+- `id` (String UUIDv4)
+- `reportId` (Foreign Key to Report)
+- `action` (`created` | `submitted` | `synced` | `status_changed` | `assigned` | `resolved` | `rejected` | `conflict_resolved`)
+- `actorName`, `description`, `previousValue`, `newValue`, `createdAt`
 
 ### IdempotencyRecord Entity
-* `key` (String, Primary Key)
-* `response` (Text JSON)
-* `createdAt` (Timestamp)
+
+- `key` (String, Primary Key)
+- `response` (Text JSON)
+- `createdAt` (Timestamp)
 
 ---
 
 ## 7. Getting Started (Setup & Execution)
 
 ### Prerequisites
-* **Node.js** v18+ or v20+
-* **npm** v9+
+
+- **Node.js** v18+ or v20+
+- **npm** v9+
 
 ### 1. Clone & Install
+
 ```bash
 git clone https://github.com/your-username/nilepixel-offline-field-tracker.git
 cd nilepixel-offline-field-tracker
@@ -222,6 +232,7 @@ npm install
 ```
 
 ### 2. Setup Database & Seed Initial Data
+
 ```bash
 cd ../server
 
@@ -233,9 +244,11 @@ npm run db:seed
 ```
 
 ### 3. Run Development Servers
+
 Open two terminal windows:
 
 **Terminal 1 (Backend API):**
+
 ```bash
 cd server
 npm run dev
@@ -243,6 +256,7 @@ npm run dev
 ```
 
 **Terminal 2 (Frontend Client):**
+
 ```bash
 cd client
 npm run dev
@@ -255,15 +269,16 @@ npm run dev
 
 Testing is prioritized by **risk of data loss and workflow corruption**:
 
-| Priority | Area | Risk Addressed | Test Suite |
-|:---|:---|:---|:---|
-| **P0 (Critical)** | **Status Transitions** | Invalid workflow bypassing triage rules | `server/src/__tests__/statusMachine.test.ts` (30 tests) |
-| **P0 (Critical)** | **Idempotent Sync** | Duplicate reports on network drops/retries | `server/src/__tests__/sync.test.ts` (5 tests) |
-| **P0 (Critical)** | **Report CRUD & Concurrency** | Version mismatch overwriting coordinator changes | `server/src/__tests__/reports.test.ts` (15 tests) |
-| **P1 (High)** | **Client Sync Engine** | Offline queue flushing and error backoff | `client/src/__tests__/syncEngine.test.ts` |
-| **P1 (High)** | **Input Validation** | Malformed coordinates or payloads | `client/src/__tests__/validation.test.ts` |
+| Priority          | Area                          | Risk Addressed                                   | Test Suite                                              |
+| :---------------- | :---------------------------- | :----------------------------------------------- | :------------------------------------------------------ |
+| **P0 (Critical)** | **Status Transitions**        | Invalid workflow bypassing triage rules          | `server/src/__tests__/statusMachine.test.ts` (30 tests) |
+| **P0 (Critical)** | **Idempotent Sync**           | Duplicate reports on network drops/retries       | `server/src/__tests__/sync.test.ts` (5 tests)           |
+| **P0 (Critical)** | **Report CRUD & Concurrency** | Version mismatch overwriting coordinator changes | `server/src/__tests__/reports.test.ts` (15 tests)       |
+| **P1 (High)**     | **Client Sync Engine**        | Offline queue flushing and error backoff         | `client/src/__tests__/syncEngine.test.ts`               |
+| **P1 (High)**     | **Input Validation**          | Malformed coordinates or payloads                | `client/src/__tests__/validation.test.ts`               |
 
 ### Running Tests
+
 ```bash
 # Run server test suite (50 tests)
 cd server
@@ -291,15 +306,16 @@ npm test
 
 ## 10. Known Limitations
 
-* **Browser Storage Reset**: If a user manually clears browser site data/cookies while offline with un-synced reports, IndexedDB entries will be lost. (Mitigated by proactive UI warning badges when pending items exist).
-* **Large Media Handling**: Photos are currently stored as compressed base64 local blobs in IndexedDB. For high-volume production, an Object Storage service (S3/Cloud Storage) with chunked background upload would be preferred.
-* **Map Tile Caching**: The interactive map uses Leaflet/OpenStreetMap. Offline map viewing requires pre-cached vector tiles for true air-gapped wilderness navigation.
+- **Browser Storage Reset**: If a user manually clears browser site data/cookies while offline with un-synced reports, IndexedDB entries will be lost. (Mitigated by proactive UI warning badges when pending items exist).
+- **Large Media Handling**: Photos are currently stored as compressed base64 local blobs in IndexedDB. For high-volume production, an Object Storage service (S3/Cloud Storage) with chunked background upload would be preferred.
+- **Map Tile Caching**: The interactive map uses Leaflet/OpenStreetMap. Offline map viewing requires pre-cached vector tiles for true air-gapped wilderness navigation.
 
 ---
 
 ## 11. Manual QA Verification Checklist
 
 Reviewers can verify offline functionality step-by-step:
+
 - [ ] **Step 1**: Open the app at `http://localhost:5173`. Confirm initial dashboard metrics load.
 - [ ] **Step 2**: Open browser DevTools → Network tab → Select **"Offline"** (or use the in-app offline toggle in Settings).
 - [ ] **Step 3**: Notice the header pill immediately flips to `Offline Mode Active`.
@@ -315,21 +331,20 @@ Reviewers can verify offline functionality step-by-step:
 
 ## 12. AI Tools & Development Disclosure
 
-* **Tools Used**: Antigravity AI Assistant, Claude 3.7 / Gemini 3.8 models, Google Stitch MCP (UI design blueprint).
-* **Usage**:
+- **Tools Used**: Antigravity AI Assistant, Claude 3.7 / Gemini 3.8 models, Google Stitch MCP (UI design blueprint).
+- **Usage**:
   - Extracted UI tokens and design layouts from Google Stitch project `projects/389610036849999050` ("NilePixel Offline Field Tracker").
   - Formulated the formal 15-section technical specification artifact.
   - Accelerated boilerplate scaffolding for Express/Prisma types and Vite configuration.
-* **Verification**: All generated schemas, status machine logic, and endpoints were verified through 50+ automated unit/integration tests running against actual database instances.
+- **Verification**: All generated schemas, status machine logic, and endpoints were verified through 50+ automated unit/integration tests running against actual database instances.
 
 ---
 
 ## 13. Time Spent & Future Roadmap
 
-* **Approximate Time Spent**: ~14 hours (Requirement analysis, architecture spec, UI design extraction, full-stack implementation, automated test suites, QA documentation).
-* **Future Roadmap (With More Time)**:
+- **Approximate Time Spent**: ~14 hours (Requirement analysis, architecture spec, UI design extraction, full-stack implementation, automated test suites, QA documentation).
+- **Future Roadmap (With More Time)**:
   - Vector tile offline caching for wilderness satellite maps (MapLibre GL / MBTiles).
   - Web Push Notifications when assigned work orders are dispatched to field crews.
   - End-to-end encryption for sensitive infrastructure vulnerability telemetry.
   - Exportable PDF engineering inspection audit reports.
-
