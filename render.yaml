@@ -26,11 +26,10 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
 
-  # 2. Frontend React PWA Static Site (Free Tier)
+  # 2. Frontend React PWA Static Site (Free by default on Render CDN)
   - type: web
     name: nilepixel-field-tracker-client
     runtime: static
-    plan: free
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
