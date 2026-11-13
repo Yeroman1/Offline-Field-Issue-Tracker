@@ -11,6 +11,8 @@ import {
   UserCheck,
   Shield,
   CheckCircle2,
+  AlertTriangle,
+  CloudOff,
   Menu,
   X,
   PlusCircle,
@@ -31,8 +33,10 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
   const { isOnline, latencyMs } = useNetworkStatus();
   const { profile, isCoordinator, signOut } = useAuth();
   const [pendingCount, setPendingCount] = useState<number>(0);
+  const [failedCount, setFailedCount] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncSuccessToast, setSyncSuccessToast] = useState<boolean>(false);
+  const [syncErrorToast, setSyncErrorToast] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const userName = profile?.fullName || profile?.email || 'Field Worker';
@@ -51,11 +55,15 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
     });
 
     const updateCount = async () => {
-      const cnt = await db.outbox.where('status').equals('pending').count();
-      setPendingCount(cnt);
+      const [pending, failed] = await Promise.all([
+        db.outbox.where('status').equals('pending').count(),
+        db.outbox.where('status').equals('failed').count(),
+      ]);
+      setPendingCount(pending);
+      setFailedCount(failed);
     };
     updateCount();
-    const interval = setInterval(updateCount, 4000);
+    const interval = setInterval(updateCount, 3000);
 
     return () => {
       unsub();
@@ -65,11 +73,21 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
 
   const handleManualSync = async () => {
     setIsSyncing(true);
+    setSyncErrorToast(null);
     const result = await syncEngine.syncNow();
     setIsSyncing(false);
+    const [pending, failed] = await Promise.all([
+      db.outbox.where('status').equals('pending').count(),
+      db.outbox.where('status').equals('failed').count(),
+    ]);
+    setPendingCount(pending);
+    setFailedCount(failed);
     if (result.success) {
       setSyncSuccessToast(true);
       setTimeout(() => setSyncSuccessToast(false), 3000);
+    } else {
+      setSyncErrorToast(result.error || 'Synchronization failed');
+      setTimeout(() => setSyncErrorToast(null), 4000);
     }
   };
 
@@ -190,27 +208,47 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
             )}
           </div>
 
-          {/* Pending Outbox Queue Pill */}
-          {pendingCount > 0 ? (
+          {/* Synchronization Telemetry Status Pill */}
+          {isSyncing ? (
+            <div
+              className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/50 animate-pulse"
+              role="status"
+              aria-label="Synchronizing with server"
+            >
+              <RefreshCw className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-400 shrink-0 animate-spin" />
+              <span className="text-[10px] sm:text-xs font-bold">SYNCHRONIZING</span>
+            </div>
+          ) : failedCount > 0 ? (
             <button
               type="button"
               onClick={handleManualSync}
               disabled={isSyncing || !isOnline}
-              className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 transition-all cursor-pointer min-h-[32px]"
-              title="Click to sync outbox queue with cloud hub"
-              aria-label={`Pending sync items: ${pendingCount}. Click to sync now.`}
+              className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/60 hover:bg-rose-500/30 transition-all cursor-pointer min-h-[32px]"
+              title={`${failedCount} item(s) failed synchronization. Click to retry.`}
+              aria-label={`Synchronization failed for ${failedCount} items. Click to retry.`}
             >
-              <RefreshCw
-                className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0 ${
-                  isSyncing ? 'animate-spin' : ''
-                }`}
-              />
-              <span className="text-[10px] sm:text-xs font-bold">{pendingCount} QUEUED</span>
+              <AlertTriangle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-400 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-bold">{failedCount} SYNC FAILED</span>
+            </button>
+          ) : pendingCount > 0 ? (
+            <button
+              type="button"
+              onClick={handleManualSync}
+              disabled={isSyncing || !isOnline}
+              className="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 transition-all cursor-pointer min-h-[32px]"
+              title="Pending synchronization. Click to sync outbox queue with server."
+              aria-label={`Pending synchronization: ${pendingCount}. Click to sync now.`}
+            >
+              <CloudOff className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400 shrink-0" />
+              <span className="text-[10px] sm:text-xs font-bold">{pendingCount} PENDING SYNC</span>
             </button>
           ) : (
-            <div className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono text-surface-container-high bg-primary-container/80 border border-slate-700">
-              <CheckCircle2 className="w-3 h-3 text-tertiary-fixed shrink-0" />
-              <span className="text-[11px]">SYNCED</span>
+            <div
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono text-emerald-300 bg-emerald-950/60 border border-emerald-800/60"
+              title="All records are synchronized with server"
+            >
+              <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span className="text-[11px] font-bold">SYNCHRONIZED</span>
             </div>
           )}
 
@@ -254,6 +292,13 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
         <div className="bg-emerald-700 text-white text-xs px-4 py-1.5 flex items-center justify-center gap-2 border-t border-emerald-500" role="status">
           <CheckCircle2 className="w-3.5 h-3.5" />
           <span>Sync complete! All reports and outbox changes updated.</span>
+        </div>
+      )}
+
+      {syncErrorToast && (
+        <div className="bg-rose-800 text-white text-xs px-4 py-1.5 flex items-center justify-center gap-2 border-t border-rose-600" role="alert">
+          <AlertTriangle className="w-3.5 h-3.5" />
+          <span>Synchronization failed: {syncErrorToast}</span>
         </div>
       )}
 

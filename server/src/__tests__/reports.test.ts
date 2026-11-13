@@ -366,6 +366,7 @@ describe('Reports API (/api/reports)', () => {
 
       const res = await request(app)
         .patch(`/api/reports/${createdReportId}/assign`)
+        .set('x-actor-role', 'COORDINATOR')
         .send(assignPayload);
 
       expect(res.status).toBe(200);

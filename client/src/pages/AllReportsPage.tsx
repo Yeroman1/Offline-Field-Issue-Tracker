@@ -277,19 +277,24 @@ export const AllReportsPage: React.FC<AllReportsPageProps> = ({
           <div className="h-4 w-px bg-surface-container mx-1" />
 
           {/* Sync Status Filter Pill */}
-          {['all', 'synced', 'pending'].map((s) => {
-            const active = selectedSync === s;
+          {[
+            { id: 'all', label: 'Any Sync' },
+            { id: 'synced', label: 'Synchronized' },
+            { id: 'pending', label: 'Pending Sync' },
+            { id: 'failed', label: 'Sync Failed' },
+          ].map((s) => {
+            const active = selectedSync === s.id;
             return (
               <button
-                key={s}
-                onClick={() => setSelectedSync(s)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap capitalize transition-colors ${
+                key={s.id}
+                onClick={() => setSelectedSync(s.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                   active
                     ? 'bg-primary-container text-tertiary-fixed font-semibold'
                     : 'bg-surface-container-lowest border border-surface-container text-on-surface-variant hover:bg-surface-container-low'
                 }`}
               >
-                {s === 'all' ? 'Any Sync' : s}
+                {s.label}
               </button>
             );
           })}

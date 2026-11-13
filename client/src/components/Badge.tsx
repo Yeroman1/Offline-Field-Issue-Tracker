@@ -8,6 +8,7 @@ import {
   Droplet,
   HardHat,
   Radio,
+  RefreshCw,
   ShieldAlert,
   Wrench,
   XCircle,
@@ -104,12 +105,20 @@ export const PriorityBadge: React.FC<{ priority: ReportPriority; size?: 'sm' | '
   );
 };
 
-export const SyncBadge: React.FC<{ syncStatus: SyncStatus }> = ({ syncStatus }) => {
+export const SyncBadge: React.FC<{ syncStatus: SyncStatus | 'syncing' }> = ({ syncStatus }) => {
   if (syncStatus === 'synced') {
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
         <CheckCircle2 className="w-3 h-3" />
-        Synced
+        Synchronized
+      </span>
+    );
+  }
+  if (syncStatus === 'syncing') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 animate-pulse">
+        <RefreshCw className="w-3 h-3 animate-spin" />
+        Synchronizing
       </span>
     );
   }
@@ -117,14 +126,14 @@ export const SyncBadge: React.FC<{ syncStatus: SyncStatus }> = ({ syncStatus }) 
     return (
       <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 animate-pulse">
         <CloudOff className="w-3 h-3" />
-        Queued Offline
+        Pending synchronization
       </span>
     );
   }
   return (
     <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
       <AlertTriangle className="w-3 h-3" />
-      Sync Failed
+      Synchronization failed
     </span>
   );
 };

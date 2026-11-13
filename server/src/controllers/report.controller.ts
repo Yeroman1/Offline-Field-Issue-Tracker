@@ -6,8 +6,8 @@ export async function createReport(req: Request, res: Response, next: NextFuncti
   try {
     const payload = {
       ...req.body,
-      reporterId: req.actor?.id || req.body.reporterId,
-      reporterName: req.actor?.fullName || req.actor?.name || req.body.reporterName,
+      reporterId: req.body.reporterId || req.actor?.id,
+      reporterName: req.body.reporterName || req.actor?.fullName || req.actor?.name,
     };
     const result = await reportService.createReport(payload, req.body);
     sendCreated(res, result, 'Report created and synchronized successfully');
