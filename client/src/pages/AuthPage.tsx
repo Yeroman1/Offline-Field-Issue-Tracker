@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth, UserRole } from '../context/AuthContext';
-import { Shield, Lock, Mail, User, AlertCircle, ArrowRight } from 'lucide-react';
+import {
+  Shield,
+  Lock,
+  Mail,
+  User,
+  AlertCircle,
+  ArrowRight,
+  HardHat,
+  CheckCircle2,
+} from 'lucide-react';
 
 export const AuthPage: React.FC = () => {
   const { signIn, signUp } = useAuth();
@@ -46,35 +55,45 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex flex-col justify-center items-center px-4 py-12">
-      <div className="w-full max-w-md bg-surface-container rounded-2xl border border-outline-variant/30 p-8 shadow-xl">
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-secondary/15 flex items-center justify-center text-secondary mb-3 shadow-inner">
-            <Shield className="w-8 h-8" />
+    <div className="min-h-screen bg-surface flex flex-col justify-center items-center px-3 sm:px-4 py-6 sm:py-12">
+      <div className="w-full max-w-md bg-surface-container rounded-2xl border border-outline-variant/30 p-4 sm:p-7 shadow-xl">
+        {/* Brand Banner */}
+        <div className="flex flex-col items-center mb-5 sm:mb-7">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-secondary/15 flex items-center justify-center text-secondary mb-2.5 shadow-inner">
+            <Shield className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
-          <h1 className="text-2xl font-bold text-on-surface tracking-tight">NilePixel Field Tracker</h1>
-          <p className="text-xs text-on-surface-variant font-mono mt-1">Production Supabase Auth Verification</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight text-center">
+            NilePixel Field Tracker
+          </h1>
+          <p className="text-[11px] sm:text-xs text-on-surface-variant font-mono mt-0.5 text-center">
+            Production Supabase Auth Verification
+          </p>
         </div>
 
+        {/* Error Feedback */}
         {errorMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-error/10 border border-error/20 flex items-start space-x-3 text-error text-xs">
+          <div className="mb-4 sm:mb-5 p-3 sm:p-4 rounded-xl bg-error/10 border border-error/20 flex items-start space-x-2.5 text-error text-xs">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <p className="font-medium">{errorMsg}</p>
           </div>
         )}
 
+        {/* Success Feedback */}
         {successMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium">
+          <div className="mb-4 sm:mb-5 p-3 sm:p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-medium">
             {successMsg}
           </div>
         )}
 
-        <div className="flex rounded-xl bg-surface-container-high p-1 mb-6 border border-outline-variant/30">
+        {/* Segmented Auth Mode Switch */}
+        <div className="flex rounded-xl bg-surface-container-high p-1 mb-5 border border-outline-variant/30">
           <button
             type="button"
             onClick={() => { setIsRegister(false); setErrorMsg(null); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              !isRegister ? 'bg-secondary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer min-h-[40px] ${
+              !isRegister
+                ? 'bg-secondary text-white shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
             Sign In
@@ -82,57 +101,63 @@ export const AuthPage: React.FC = () => {
           <button
             type="button"
             onClick={() => { setIsRegister(true); setErrorMsg(null); }}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-              isRegister ? 'bg-secondary text-white shadow-sm' : 'text-on-surface-variant hover:text-on-surface'
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer min-h-[40px] ${
+              isRegister
+                ? 'bg-secondary text-white shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface'
             }`}
           >
             Create Account
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Auth Form */}
+        <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
+          {/* Full Name for Registration */}
           {isRegister && (
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Full Name
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
+                Full Name <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
-                <User className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-3.5" />
+                <User className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="e.g. Sarah J."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-outline-variant/50 text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary transition-colors"
+                  placeholder="e.g. David Deng"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-outline-variant/50 text-base sm:text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
                 />
               </div>
             </div>
           )}
 
+          {/* Email */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-              Work Email
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
+              Work Email <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-3.5" />
+              <Mail className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="technician@nilepixel.org"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-outline-variant/50 text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-outline-variant/50 text-base sm:text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
               />
             </div>
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-              Password
+            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
+              Password <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-3.5" />
+              <Lock className="w-4 h-4 text-on-surface-variant absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="password"
                 required
@@ -140,31 +165,83 @@ export const AuthPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-outline-variant/50 text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:border-secondary transition-colors"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-surface border border-outline-variant/50 text-base sm:text-sm text-on-surface placeholder-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:border-secondary transition-all min-h-[44px]"
               />
             </div>
           </div>
 
+          {/* Responsive Touch-Friendly Role Selector Cards */}
           {isRegister && (
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Role Assignment
+            <div className="pt-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2">
+                Operational Role <span className="text-rose-500">*</span>
               </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-surface border border-outline-variant/50 text-sm text-on-surface focus:outline-none focus:border-secondary transition-colors"
+              
+              <div
+                role="radiogroup"
+                aria-label="Operational Role"
+                className="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
               >
-                <option value="FIELD_WORKER">Field Worker (Authoring & Local Sync)</option>
-                <option value="COORDINATOR">Coordinator (Triage, Assignment & Resolution)</option>
-              </select>
+                {/* Field Worker Card */}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={role === 'FIELD_WORKER'}
+                  onClick={() => setRole('FIELD_WORKER')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
+                    role === 'FIELD_WORKER'
+                      ? 'border-secondary bg-secondary/10 ring-2 ring-secondary/30 shadow-sm'
+                      : 'border-outline-variant/40 bg-surface hover:bg-surface-container-low'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="flex items-center gap-1.5 font-bold text-xs text-on-surface">
+                      <HardHat className={`w-4 h-4 ${role === 'FIELD_WORKER' ? 'text-secondary' : 'text-on-surface-variant'}`} />
+                      <span>Field Worker</span>
+                    </span>
+                    {role === 'FIELD_WORKER' && (
+                      <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-tight">
+                    Submit reports offline, capture telemetry & sync locally.
+                  </p>
+                </button>
+
+                {/* Coordinator Card */}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={role === 'COORDINATOR'}
+                  onClick={() => setRole('COORDINATOR')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[72px] ${
+                    role === 'COORDINATOR'
+                      ? 'border-secondary bg-secondary/10 ring-2 ring-secondary/30 shadow-sm'
+                      : 'border-outline-variant/40 bg-surface hover:bg-surface-container-low'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="flex items-center gap-1.5 font-bold text-xs text-on-surface">
+                      <Shield className={`w-4 h-4 ${role === 'COORDINATOR' ? 'text-secondary' : 'text-on-surface-variant'}`} />
+                      <span>Coordinator</span>
+                    </span>
+                    {role === 'COORDINATOR' && (
+                      <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-tight">
+                    Triage issues, dispatch crews & verify resolved tickets.
+                  </p>
+                </button>
+              </div>
             </div>
           )}
 
+          {/* Submit Action */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-secondary text-white font-bold text-sm rounded-xl hover:bg-secondary/90 transition-all flex items-center justify-center space-x-2 shadow-lg shadow-secondary/20 disabled:opacity-50 cursor-pointer mt-6"
+            className="w-full py-3 px-4 bg-secondary text-white font-bold text-sm rounded-xl hover:bg-secondary/90 active:scale-[0.99] transition-all flex items-center justify-center space-x-2 shadow-lg shadow-secondary/20 disabled:opacity-50 cursor-pointer min-h-[48px] mt-4"
           >
             <span>{loading ? 'Processing...' : isRegister ? 'Register Field Profile' : 'Sign In'}</span>
             <ArrowRight className="w-4 h-4" />
@@ -174,4 +251,3 @@ export const AuthPage: React.FC = () => {
     </div>
   );
 };
-
