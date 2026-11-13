@@ -1,19 +1,14 @@
 import app from './app';
-import prisma from './lib/prisma';
+import { prisma } from './config/database';
+import { env } from './config/env';
 import { seedDatabase } from './lib/seedData';
 
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT || 3001;
 
 async function start() {
   try {
-    // Check if database needs seeding
     const count = await prisma.report.count();
-    if (count === 0) {
-      console.log('Database empty on startup. Running initial seed...');
-      await seedDatabase();
-    } else {
-      console.log(`Database already populated with ${count} reports.`);
-    }
+    console.log(`Connected to database. Current operational reports count: ${count}`);
 
     const server = app.listen(PORT, () => {
       console.log(`🚀 NilePixel Field Tracker API running on http://localhost:${PORT}`);
@@ -41,4 +36,3 @@ if (require.main === module || !process.env.VITEST) {
 }
 
 export { app };
-
