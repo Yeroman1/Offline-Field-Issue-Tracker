@@ -37,7 +37,7 @@ export async function generateNextReportNumber(tx: any = prisma): Promise<string
     where: { reportNumber: { startsWith: 'NP-' } },
   });
 
-  const existingSet = new Set(reports.map((r) => r.reportNumber));
+  const existingSet = new Set(reports.map((r: any) => r.reportNumber));
 
   let maxNum = 8800;
   for (const r of reports) {
