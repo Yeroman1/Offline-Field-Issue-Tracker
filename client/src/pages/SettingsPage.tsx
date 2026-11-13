@@ -217,6 +217,18 @@ export const SettingsPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Official Branding Footer */}
+      <div className="flex flex-col items-center justify-center pt-4 pb-2 text-center opacity-85 hover:opacity-100 transition-opacity">
+        <img
+          src="/logo.png"
+          alt="NilePixel Offline Field Issue Tracker"
+          className="h-10 w-auto object-contain mb-1"
+        />
+        <p className="text-[10px] text-on-surface-variant font-mono">
+          NilePixel Offline Field Issue Tracker • v1.0.0 Production
+        </p>
+      </div>
     </div>
   );
 };

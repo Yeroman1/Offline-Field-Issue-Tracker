@@ -1,4 +1,8 @@
-# NilePixel Offline Field Issue Tracker
+<div align="center">
+  <img src="client/public/logo.png" alt="NilePixel Offline Field Issue Tracker" width="360" />
+  <br/>
+  <h1>NilePixel Offline Field Issue Tracker</h1>
+</div>
 
 **NilePixel Technologies — Cohort 1 Individual Graduation Project**  
 **Student:** [Student Full Name]  

@@ -8,7 +8,6 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
-  Radio,
   UserCheck,
   Shield,
   CheckCircle2,
@@ -104,12 +103,14 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateSettings }) => {
 
           <div
             onClick={() => { setMobileMenuOpen(false); navigate('/'); }}
-            className="flex items-center gap-2 cursor-pointer group select-none"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group select-none"
             title="Return to Dashboard"
           >
-            <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-secondary to-secondary-container text-white shadow-inner group-hover:scale-105 transition-transform shrink-0">
-              <Radio className="w-4 h-4 sm:w-5 sm:h-5 text-tertiary-fixed" />
-            </div>
+            <img
+              src="/logo-icon.png"
+              alt="NilePixel Logo"
+              className="w-8 h-8 sm:w-9 sm:h-9 object-contain group-hover:scale-105 transition-transform shrink-0 drop-shadow"
+            />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-base sm:text-lg font-black tracking-wider uppercase text-white font-mono group-hover:text-tertiary-fixed transition-colors">

@@ -57,16 +57,15 @@ export const AuthPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-surface flex flex-col justify-center items-center px-3 sm:px-4 py-6 sm:py-12">
       <div className="w-full max-w-md bg-surface-container rounded-2xl border border-outline-variant/30 p-4 sm:p-7 shadow-xl">
-        {/* Brand Banner */}
+        {/* Brand Banner with Official NilePixel Logo */}
         <div className="flex flex-col items-center mb-5 sm:mb-7">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-secondary/15 flex items-center justify-center text-secondary mb-2.5 shadow-inner">
-            <Shield className="w-7 h-7 sm:w-8 sm:h-8" />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-on-surface tracking-tight text-center">
-            NilePixel Field Tracker
-          </h1>
-          <p className="text-[11px] sm:text-xs text-on-surface-variant font-mono mt-0.5 text-center">
-            Production Supabase Auth Verification
+          <img
+            src="/logo.png"
+            alt="NilePixel Offline Field Issue Tracker"
+            className="h-16 sm:h-20 w-auto object-contain mb-3 drop-shadow-sm"
+          />
+          <p className="text-[11px] sm:text-xs text-on-surface-variant font-mono text-center">
+            Tactical Offline Field Issue Tracking & Monitoring
           </p>
         </div>
 

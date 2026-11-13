@@ -1,9 +1,12 @@
-const CACHE_NAME = 'nilepixel-field-tracker-v1';
+const CACHE_NAME = 'nilepixel-field-tracker-v2';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/vite.svg'
+  '/logo.png',
+  '/logo-icon.png',
+  '/favicon.png',
+  '/icon-192.png'
 ];
 
 self.addEventListener('install', (event) => {
