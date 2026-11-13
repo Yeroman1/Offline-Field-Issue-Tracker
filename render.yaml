@@ -9,7 +9,7 @@ services:
     plan: free
     region: frankfurt
     rootDir: server
-    buildCommand: npm install && npx prisma generate && npm run build
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
@@ -18,20 +18,20 @@ services:
       - key: PORT
         value: 10000
       - key: DATABASE_URL
-        sync: false
+        value: postgresql://postgres.rmfkkpmfnymvksyvdjyy:RidzTKaqHAF57wd4@aws-1-eu-north-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require
       - key: DIRECT_URL
-        sync: false
+        value: postgresql://postgres.rmfkkpmfnymvksyvdjyy:RidzTKaqHAF57wd4@aws-1-eu-north-1.pooler.supabase.com:5432/postgres?sslmode=require
       - key: SUPABASE_URL
-        sync: false
+        value: https://rmfkkpmfnymvksyvdjyy.supabase.co
       - key: SUPABASE_ANON_KEY
-        sync: false
+        value: sb_publishable_vdTAubPm21xSVSXmclCv2A_bTQZhgrn
 
-  # 2. Frontend React PWA Static Site (Free by default on Render CDN)
+  # 2. Frontend React PWA Static Site (Free on Render Global CDN)
   - type: web
     name: nilepixel-field-tracker-client
     runtime: static
     rootDir: client
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     staticPublishPath: dist
     routes:
       - type: rewrite
@@ -39,9 +39,8 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_SUPABASE_URL
-        sync: false
+        value: https://rmfkkpmfnymvksyvdjyy.supabase.co
       - key: VITE_SUPABASE_ANON_KEY
-        sync: false
+        value: sb_publishable_vdTAubPm21xSVSXmclCv2A_bTQZhgrn
       - key: VITE_API_BASE_URL
-        sync: false
-
+        value: https://nilepixel-field-tracker-api.onrender.com

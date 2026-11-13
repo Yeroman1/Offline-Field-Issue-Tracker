@@ -10,8 +10,8 @@ async function start() {
     const count = await prisma.report.count();
     console.log(`Connected to database. Current operational reports count: ${count}`);
 
-    const server = app.listen(PORT, () => {
-      console.log(`🚀 NilePixel Field Tracker API running on http://localhost:${PORT}`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 NilePixel Field Tracker API running on http://0.0.0.0:${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
     });
 
